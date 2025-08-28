@@ -1,143 +1,141 @@
-'use client'
+import { auth } from "@/lib/auth"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Github, GitBranch, Search, Zap, AlertCircle } from "lucide-react"
+import { SignInButton } from "@/components/sign-in-button"
+import { DirectSignInButton } from "@/components/direct-sign-in-button"
+import { redirect } from "next/navigation"
 
-import { ArrowRightIcon, FireIcon, ChartBarIcon } from '@heroicons/react/24/outline'
-import { Github, Package, Search, Zap } from 'lucide-react'
+export default async function Home() {
+  let session = null
+  let authError: string | null = null
 
-export default function Home() {
-  const features = [
-    {
-      icon: <Search className="w-6 h-6" />,
-      title: "Smart Detection",
-      description: "Automatically scan and detect all dependencies in your Kotlin projects with intelligent parsing."
-    },
-    {
-      icon: <ChartBarIcon className="w-6 h-6" />,
-      title: "Visual Analysis",
-      description: "Beautiful interactive graphs and charts to understand your dependency relationships."
-    },
-    {
-      icon: <Zap className="w-6 h-6" />,
-      title: "Smart Suggestions",
-      description: "Get AI-powered recommendations for optimizing and updating your dependencies."
-    },
-    {
-      icon: <Package className="w-6 h-6" />,
-      title: "Version Management",
-      description: "Track versions, identify conflicts, and manage updates across your entire project."
-    }
-  ]
-
-  const handleGetStarted = () => {
-    // Placeholder for future authentication logic
-    console.log('Get started clicked')
+  try {
+    session = await auth()
+  } catch (error) {
+    console.error("Auth error:", error)
+    authError = error instanceof Error ? error.message : "Unknown authentication error"
   }
 
+  // If user is already authenticated, redirect to dashboard
+  if (session) {
+    redirect("/dashboard")
+  }
+
+  // Check if environment variables are properly configured
+  const isConfigured = process.env.GITHUB_ID && 
+                      process.env.GITHUB_SECRET && 
+                      process.env.NEXTAUTH_SECRET
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-40 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-100/50 to-transparent"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-pink-100/50 to-transparent"></div>
-      </div>
-      
-      {/* Navigation */}
-      <nav className="relative z-10 flex justify-between items-center p-6 lg:p-8">
-        <div className="flex items-center space-x-2 animate-fade-in-left">
-          <FireIcon className="w-8 h-8 text-purple-600" />
-          <span className="text-gray-900 text-xl font-bold">Tokbokki</span>
-        </div>
-        
-        <button
-          onClick={handleGetStarted}
-          className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm border border-gray-200 text-gray-900 px-6 py-2 rounded-full hover:bg-white/90 hover:scale-[1.02] transition-all duration-200 shadow-sm animate-fade-in-right"
-        >
-          <Github className="w-4 h-4" />
-          <span>Sign in with GitHub</span>
-        </button>
-      </nav>
-
-      {/* Hero Section */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
-        <div className="max-w-4xl mx-auto animate-fade-in-up">
-          <h1 className="text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight animate-fade-in-up animation-delay-200">
-            Visualize Your
-            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"> Kotlin </span>
-            Dependencies
-          </h1>
-          
-          <p className="text-xl lg:text-2xl text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed animate-fade-in-up animation-delay-400">
-            Detect, analyze, and optimize your Kotlin project dependencies with beautiful visualizations and intelligent suggestions.
-          </p>
-
-          <button
-            onClick={handleGetStarted}
-            className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-200 shadow-xl hover:shadow-purple-500/25 animate-fade-in-up animation-delay-600"
-          >
-            <span className="flex items-center space-x-2">
-              <Github className="w-5 h-5" />
-              <span>Get Started with GitHub</span>
-              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-100" />
-            </span>
-          </button>
-        </div>
-
-        {/* Floating Elements - Pure CSS */}
-        <div className="absolute top-20 left-20 w-16 h-16 bg-gradient-to-r from-purple-300 to-pink-300 rounded-full opacity-30 blur-xl animate-float pointer-events-none"></div>
-        <div className="absolute bottom-40 right-20 w-24 h-24 bg-gradient-to-r from-blue-300 to-purple-300 rounded-full opacity-25 blur-2xl animate-float-slow pointer-events-none"></div>
-      </div>
-
-      {/* Features Section */}
-      <div className="relative z-10 py-20 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16 animate-fade-in-up">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              Powerful Features
-            </h2>
-            <p className="text-xl text-gray-700 max-w-2xl mx-auto">
-              Everything you need to understand and optimize your Kotlin project dependencies
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="bg-white/70 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 hover:bg-white/90 hover:-translate-y-1 transition-all duration-200 shadow-sm hover:shadow-md animate-fade-in-up"
-                style={{ animationDelay: `${index * 100 + 800}ms` }}
-              >
-                <div className="text-purple-600 mb-4">
-                  {feature.icon}
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {feature.description}
-                </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="container mx-auto px-4 py-16">
+        {!isConfigured && (
+          <Card className="mb-8 border-yellow-200 bg-yellow-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                <AlertCircle className="w-5 h-5" />
+                <span className="font-medium">Configuration Required</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              <p className="text-yellow-700 mb-3">
+                Please set up your environment variables before using the application:
+              </p>
+              <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                <li>Create a GitHub OAuth app at <a href="https://github.com/settings/developers" className="underline">GitHub Developer Settings</a></li>
+                <li>Set the callback URL to: <code className="bg-yellow-200 px-1 rounded">http://localhost:3000/api/auth/callback/github</code></li>
+                <li>Update your <code className="bg-yellow-200 px-1 rounded">.env.local</code> file with your GitHub credentials</li>
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* CTA Section */}
-      <div className="relative z-10 py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center bg-white/70 backdrop-blur-sm border border-gray-200 rounded-3xl p-12 shadow-lg animate-fade-in-up">
-          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-            Ready to Start?
-          </h2>
-          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
-            Connect your GitHub account and start analyzing your Kotlin projects in seconds.
+        {authError && (
+          <Card className="mb-8 border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2 text-red-800 mb-2">
+                <AlertCircle className="w-5 h-5" />
+                <span className="font-medium">Authentication Error</span>
+              </div>
+              <p className="text-red-700 text-sm">
+                There was an error with the authentication configuration. Please check your environment variables.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="text-center mb-16">
+          <div className="flex justify-center mb-6">
+            <Github className="w-16 h-16 text-gray-800" />
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            GitHub Repository Explorer
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Explore your GitHub repositories, browse files, and view code with an elegant interface.
+            Sign in with your GitHub account to get started.
           </p>
-          <button
-            onClick={handleGetStarted}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-200 shadow-xl hover:shadow-purple-500/25"
-          >
-            <span className="flex items-center space-x-2">
+          
+          {isConfigured ? (
+            <div className="space-y-4">
+              <SignInButton />
+              <div className="text-sm text-gray-500">or</div>
+              <DirectSignInButton />
+            </div>
+          ) : (
+            <Button disabled size="lg" className="gap-2">
               <Github className="w-5 h-5" />
-              <span>Connect GitHub Account</span>
-            </span>
-          </button>
+              Configure App First
+            </Button>
+          )}
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <Card>
+            <CardHeader>
+              <Search className="w-8 h-8 text-blue-600 mb-2" />
+              <CardTitle>Browse Repositories</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                View all your public and private repositories with search and pagination support.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <GitBranch className="w-8 h-8 text-green-600 mb-2" />
+              <CardTitle>Explore File Structure</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Navigate through your repository&apos;s file tree with an intuitive folder structure.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <Zap className="w-8 h-8 text-purple-600 mb-2" />
+              <CardTitle>View Code</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Read file contents with syntax highlighting for over 30 programming languages.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="mt-16 text-center">
+          <p className="text-sm text-gray-500 mb-4">
+            Secure authentication via GitHub OAuth • No data stored • Read-only access
+          </p>
+          <div className="text-xs">
+            <a href="/auth/debug" className="text-blue-600 hover:text-blue-800 underline">
+              Debug Authentication Issues
+            </a>
+          </div>
         </div>
       </div>
     </div>
