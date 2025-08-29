@@ -21,8 +21,11 @@ import {
   AlertCircle,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   Copy,
-  Check
+  Check,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react"
 import Link from "next/link"
 
@@ -60,6 +63,7 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
   const [loadingFile, setLoadingFile] = useState(false) // loading file content
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
 
+  const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false)
 
   const repoFullName = `${owner}/${name}`
   const fetchFileTree = async () => {
@@ -115,6 +119,10 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
     setExpandedFolders(newExpanded)
   }
 
+  const toggleFileTree = () => {
+    setIsFileTreeCollapsed(!isFileTreeCollapsed)
+  }
+
   // const copyToClipboard = async () => {
   //   if (fileContent?.content) {
   //     await navigator.clipboard.writeText(fileContent.content)
@@ -127,10 +135,10 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
     return nodes.map((node) => (
       <div key={node.path}>
         <div
-          className={`flex items-center gap-2 py-1 px-2 hover:bg-gray-100 cursor-pointer rounded text-sm ${
-            selectedFile === node.path ? "bg-blue-100 text-blue-700" : ""
+          className={`flex items-center gap-2 py-2 px-3 hover:bg-gray-50 cursor-pointer text-sm transition-colors ${
+            selectedFile === node.path ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500" : "text-gray-700"
           }`}
-          style={{ paddingLeft: `${(depth + 1) * 12}px` }}
+          style={{ paddingLeft: `${(depth + 1) * 12 + 12}px` }}
           onClick={() => {
             if (node.type === "folder") {
               toggleFolder(node.path)
@@ -146,7 +154,7 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
               ) : (
                 <ChevronRight className="w-4 h-4 text-gray-500" />
               )}
-              <Folder className="w-4 h-4 text-blue-500" />
+              <Folder className="w-4 h-4 text-blue-600" />
             </>
           ) : (
             <>
@@ -154,9 +162,9 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
               <File className="w-4 h-4 text-gray-500" />
             </>
           )}
-          <span className="flex-1">{node.name}</span>
+          <span className="flex-1 truncate">{node.name}</span>
           {node.type === "file" && node.size && (
-            <span className="text-xs text-gray-400">{formatBytes(node.size)}</span>
+            <span className="text-xs text-gray-400 ml-2">{formatBytes(node.size)}</span>
           )}
         </div>
         
@@ -255,9 +263,9 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
   // }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-gray-200 flex-shrink-0">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" asChild>
@@ -287,9 +295,10 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {error && (
-          <Card className="mb-6 border-red-200 bg-red-50">
+      {/* Error Banner */}
+      {error && (
+        <div className="container mx-auto px-4 pt-4">
+          <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-red-800">
                 <AlertCircle className="w-5 h-5" />
@@ -304,25 +313,34 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
               </Button>
             </CardContent>
           </Card>
-        )}
+        </div>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-          {/* File Tree */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Folder className="w-5 h-5" />
-                Files
-              </CardTitle>
-              <CardDescription>
-                Browse repository files and folders
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
+      {/* Main Content Area */}
+      <div className="flex flex-1 relative">
+        {/* File Tree Sidebar */}
+        <div className={`relative transition-all duration-300 ease-in-out ${
+          isFileTreeCollapsed ? 'w-0' : 'w-80'
+        }`}>
+          <div className={`h-full bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex ${
+            isFileTreeCollapsed ? 'opacity-0 pointer-events-none -translate-x-full' : 'opacity-100'
+          }`}>
+            {/* Sidebar Content */}
+            <div className="flex-1 flex flex-col">
+              {/* Sidebar Header */}
+              <div className="flex items-center p-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Folder className="w-5 h-5 text-gray-600" />
+                  <h3 className="font-semibold text-gray-900">Files</h3>
+                </div>
+              </div>
+
+              {/* Sidebar Content */}
+              <ScrollArea className="flex-1">
                 <div className="p-2">
                   {loading ? (
                     Array.from({ length: 10 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-2 py-1 px-2">
+                      <div key={i} className="flex items-center gap-2 py-2 px-3">
                         <Skeleton className="w-4 h-4" />
                         <Skeleton className="h-4 flex-1" />
                       </div>
@@ -335,36 +353,46 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
                     renderFileTree(fileTree)
                   )}
                 </div>
-            </CardContent>
-          </Card>
+              </ScrollArea>
+            </div>
 
-          {/* File Content */}
-          {/* <Card className="lg:col-span-2">
-            <CardContent className="p-0 h-full">
-              {loadingFile ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading file content...</p>
-                  </div>
-                </div>
-              ) : selectedFile && fileContent ? (
-                renderFileContent()
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Select a file to view
-                    </h3>
-                    <p className="text-gray-600">
-                      Click on any file in the tree to view its contents
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card> */}
+            {/* Full Height Toggle Bar - Visible */}
+            <div 
+              className="w-4 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors flex items-center justify-center group border-l border-gray-200"
+              onClick={toggleFileTree}
+            >
+              {/* <div className="w-1 h-8 bg-gray-400 group-hover:bg-gray-600 transition-colors rounded-full flex items-center justify-center"> */}
+                <ChevronLeft className="w-16 h-16" />
+              {/* </div> */}
+            </div>
+          </div>
+        </div>
+
+        {/* Full Height Toggle Bar - Hidden */}
+        {isFileTreeCollapsed && (
+          <div 
+            className="w-4 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors flex items-center justify-center group border-r border-gray-200"
+            onClick={toggleFileTree}
+          >
+            {/* <div className="w-1 h-8 bg-gray-400 group-hover:bg-gray-600 transition-colors rounded-full flex items-center justify-center"> */}
+              <ChevronRight className="w-16 h-16" />
+            {/* </div> */}
+          </div>
+        )}
+
+        {/* Main Content Area */}
+        <div className="flex-1 bg-gray-50">
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Content area placeholder
+              </h3>
+              <p className="text-gray-600">
+                Sidebar file tree is ready!
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
