@@ -2,6 +2,7 @@
 
 import { ArrowRightIcon, FireIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import { Github, Package, Search, Zap } from 'lucide-react'
+import { signIn } from "next-auth/react"
 
 export default function Home() {
   const features = [
@@ -27,9 +28,15 @@ export default function Home() {
     }
   ]
 
-  const handleGetStarted = () => {
-    // Placeholder for future authentication logic
-    console.log('Get started clicked')
+  const handleGetStarted = async () => {
+    try {
+      await signIn("github", { 
+        callbackUrl: "/dashboard",
+        redirect: true 
+      })
+    } catch (error) {
+      console.error("Sign in error:", error)
+    }
   }
 
   return (
@@ -51,8 +58,7 @@ export default function Home() {
           onClick={handleGetStarted}
           className="flex items-center space-x-2 bg-white/70 backdrop-blur-sm border border-gray-200 text-gray-900 px-6 py-2 rounded-full hover:bg-white/90 hover:scale-[1.02] transition-all duration-200 shadow-sm animate-fade-in-right"
         >
-          <Github className="w-4 h-4" />
-          <span>Sign in with GitHub</span>
+          <span>Login</span>
         </button>
       </nav>
 
@@ -71,7 +77,7 @@ export default function Home() {
 
           <button
             onClick={handleGetStarted}
-            className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-200 shadow-xl hover:shadow-purple-500/25 animate-fade-in-up animation-delay-600"
+            className="hover:cursor-pointer group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-200 shadow-xl hover:shadow-purple-500/25 animate-fade-in-up animation-delay-600"
           >
             <span className="flex items-center space-x-2">
               <Github className="w-5 h-5" />
@@ -120,26 +126,19 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CTA Section */}
-      <div className="relative z-10 py-20 px-6">
-        <div className="max-w-4xl mx-auto text-center bg-white/70 backdrop-blur-sm border border-gray-200 rounded-3xl p-12 shadow-lg animate-fade-in-up">
-          <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-            Ready to Start?
-          </h2>
-          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
-            Connect your GitHub account and start analyzing your Kotlin projects in seconds.
-          </p>
-          <button
-            onClick={handleGetStarted}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-200 shadow-xl hover:shadow-purple-500/25"
-          >
-            <span className="flex items-center space-x-2">
-              <Github className="w-5 h-5" />
-              <span>Connect GitHub Account</span>
-            </span>
-          </button>
+      {/* Footer */}
+      <footer className="relative z-10 py-8 px-6 border-t border-gray-200 bg-white/50 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center text-gray-600">
+          <div className="flex items-center space-x-2 mb-4 md:mb-0">
+            <FireIcon className="w-6 h-6 text-purple-600" />
+            <span className="text-gray-900 font-semibold">Tokbokki</span>
+          </div>
+          
+          <div className="text-sm text-center md:text-right">
+            <p>&copy; 2025 Tokbokki. All rights reserved.</p>
+          </div>
         </div>
-      </div>
+      </footer>
     </div>
   )
 }
