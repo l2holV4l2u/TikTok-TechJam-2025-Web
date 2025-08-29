@@ -10,11 +10,15 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@xyflow/react": "^12.8.4",
+    "d3-force": "^3.0.0",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.542.0",
     "next": "15.5.2",
+    "openai": "^5.16.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "reactflow": "^11.11.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
