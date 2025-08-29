@@ -45,6 +45,8 @@ interface ReposResponse {
 
 export default function DashboardClient({ session }: DashboardClientProps) {
   const [repos, setRepos] = useState<GitHubRepo[]>([])
+  const [allrepos, setAllrepos] = useState<GitHubRepo[]>([])
+  const [loadingAllrepos, setLoadingAllrepos] = useState(true)
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,6 +54,32 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
   const [filterLanguage, setFilterLanguage] = useState<string | null>(null)
+  const fetchAllRepos = async () => {
+    try {
+      setLoadingAllrepos(true)
+      const response = await fetch(`/api/github/repos?per_page=100`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repositories: ${response.statusText}`)
+      }
+      const data: ReposResponse = await response.json()
+      setAllrepos(data.repos)
+      while(data.pagination.hasNextPage) {
+        const nextPage = data.pagination.page + 1
+        const nextResponse = await fetch(`/api/github/repos?page=${nextPage}&per_page=100`)
+        if (!nextResponse.ok) {
+          throw new Error(`Failed to fetch repositories: ${nextResponse.statusText}`)
+        }
+        const nextData: ReposResponse = await nextResponse.json()
+        setAllrepos(prev => [...prev, ...nextData.repos])
+        data.pagination.page = nextData.pagination.page
+        data.pagination.hasNextPage = nextData.pagination.hasNextPage
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch repositories")
+    } finally {
+      setLoadingAllrepos(false)
+    }
+  }
   const fetchRepos = async (page = 1, search = "") => {
     try {
       setLoading(page === 1)
@@ -89,6 +117,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
 
   useEffect(() => {
     fetchRepos()
+    fetchAllRepos()
   }, [])
 
   const handleSearch = (e: React.FormEvent) => {
@@ -244,7 +273,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
 
         {/* Repository List */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {loading && repos.length === 0 ? (
+          {loading && loadingAllrepos && repos.length === 0 ? (
             // Loading skeletons
             Array.from({ length: 6 }).map((_, i) => (
               <Card key={i}>
@@ -372,7 +401,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-gray-200 text-center text-sm text-gray-500">
           <p>
-            Showing {filteredRepos.length} of {repos.length} repositories • 
+            Showing {filteredRepos.length} of {allrepos.length} repositories • 
             Powered by GitHub API • 
             Built with Next.js
           </p>

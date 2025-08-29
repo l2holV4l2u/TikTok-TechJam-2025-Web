@@ -53,16 +53,15 @@ interface FileContentResponse {
 
 export default function RepoClient({ session, owner, name }: RepoClientProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true) // loading tree
   const [error, setError] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [fileContent, setFileContent] = useState<FileContentResponse | null>(null)
-  const [loadingFile, setLoadingFile] = useState(false)
+  const [loadingFile, setLoadingFile] = useState(false) // loading file content
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
-  const [copied, setCopied] = useState(false)
+
 
   const repoFullName = `${owner}/${name}`
-
   const fetchFileTree = async () => {
     try {
       setLoading(true)
@@ -94,6 +93,7 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
       const data: FileContentResponse = await response.json()
       setFileContent(data)
       setSelectedFile(path)
+      console.log(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch file content")
     } finally {
