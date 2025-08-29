@@ -1,123 +1,131 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Session } from "next-auth"
-import { signOut } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useState, useEffect } from "react";
+import { Session } from "next-auth";
+import { signOut } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { GitHubRepo } from "@/lib/github"
-import { formatDistanceToNow } from "date-fns"
-import { 
-  Github, 
-  Search, 
-  Calendar, 
-  Star, 
-  GitFork, 
-  Lock, 
-  Globe, 
+} from "@/components/ui/dropdown-menu";
+import { GitHubRepo } from "@/lib/github";
+import { formatDistanceToNow } from "date-fns";
+import {
+  Github,
+  Search,
+  Calendar,
+  Star,
+  GitFork,
+  Lock,
+  Globe,
   LogOut,
   ExternalLink,
   ChevronRight,
   Filter,
-  ChevronDown
-} from "lucide-react"
-import Link from "next/link"
+  ChevronDown,
+} from "lucide-react";
+import Link from "next/link";
 
 interface DashboardClientProps {
-  session: Session
+  session: Session;
 }
 
 interface ReposResponse {
-  repos: GitHubRepo[]
+  repos: GitHubRepo[];
   pagination: {
-    page: number
-    hasNextPage: boolean
-  }
+    page: number;
+    hasNextPage: boolean;
+  };
 }
 
 export default function DashboardClient({ session }: DashboardClientProps) {
-  const [repos, setRepos] = useState<GitHubRepo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasNextPage, setHasNextPage] = useState(false)
-  const [filterLanguage, setFilterLanguage] = useState<string | null>(null)
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [filterLanguage, setFilterLanguage] = useState<string | null>(null);
   const fetchRepos = async (page = 1, search = "") => {
     try {
-      setLoading(page === 1)
-      setSearching(page === 1 && !!search)
-      
+      setLoading(page === 1);
+      setSearching(page === 1 && !!search);
+
       const params = new URLSearchParams({
         page: page.toString(),
-        ...(search && { search })
-      })
-      
-      const response = await fetch(`/api/github/repos?${params}`)
-      
+        ...(search && { search }),
+      });
+
+      const response = await fetch(`/api/github/repos?${params}`);
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch repositories: ${response.statusText}`)
+        throw new Error(`Failed to fetch repositories: ${response.statusText}`);
       }
-      
-      const data: ReposResponse = await response.json()
-      
+
+      const data: ReposResponse = await response.json();
+
       if (page === 1) {
-        setRepos(data.repos)
+        setRepos(data.repos);
       } else {
-        setRepos(prev => [...prev, ...data.repos])
+        setRepos((prev) => [...prev, ...data.repos]);
       }
-      
-      setCurrentPage(data.pagination.page)
-      setHasNextPage(data.pagination.hasNextPage)
-      setError(null)
+
+      setCurrentPage(data.pagination.page);
+      setHasNextPage(data.pagination.hasNextPage);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch repositories")
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch repositories"
+      );
     } finally {
-      setLoading(false)
-      setSearching(false)
+      setLoading(false);
+      setSearching(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchRepos()
-  }, [])
+    fetchRepos();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setCurrentPage(1)
-    fetchRepos(1, searchTerm)
-  }
+    e.preventDefault();
+    setCurrentPage(1);
+    fetchRepos(1, searchTerm);
+  };
 
   const loadMore = () => {
     if (!loading && hasNextPage) {
-      fetchRepos(currentPage + 1, searchTerm)
+      fetchRepos(currentPage + 1, searchTerm);
     }
-  }
+  };
 
   const formatDate = (dateString: string) => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true })
+      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
     } catch {
-      return "Unknown"
+      return "Unknown";
     }
-  }
+  };
 
   // Filter repositories based on selected language
   const filteredRepos = repos.filter((repo) => {
     if (filterLanguage && repo.language !== filterLanguage) {
-      return false
+      return false;
     }
-    return true
-  })
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -136,10 +144,10 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 </p>
               </div>
             </div>
-            
-            <Button 
-              variant="outline" 
-              onClick={() => signOut()} 
+
+            <Button
+              variant="outline"
+              onClick={() => signOut()}
               className="gap-2"
             >
               <LogOut className="w-4 h-4" />
@@ -158,7 +166,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               Search Repositories
             </CardTitle>
             <CardDescription>
-              Find repositories by name, description, or filter by programming language
+              Find repositories by name, description, or filter by programming
+              language
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -175,7 +184,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   {searching ? "Searching..." : "Search"}
                 </Button>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700">
@@ -183,28 +192,33 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 </label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-48 justify-between"
-                    >
+                    <Button variant="outline" className="w-48 justify-between">
                       {filterLanguage || "All languages"}
                       <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-48">
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onSelect={() => setFilterLanguage(null)}
                       className={filterLanguage === null ? "bg-accent" : ""}
                     >
                       All languages
                     </DropdownMenuItem>
-                    {Array.from(new Set(repos.map(repo => repo.language).filter((lang): lang is string => Boolean(lang))))
+                    {Array.from(
+                      new Set(
+                        repos
+                          .map((repo) => repo.language)
+                          .filter((lang): lang is string => Boolean(lang))
+                      )
+                    )
                       .sort()
-                      .map(language => (
-                        <DropdownMenuItem 
+                      .map((language) => (
+                        <DropdownMenuItem
                           key={language}
                           onSelect={() => setFilterLanguage(language)}
-                          className={filterLanguage === language ? "bg-accent" : ""}
+                          className={
+                            filterLanguage === language ? "bg-accent" : ""
+                          }
                         >
                           {language}
                         </DropdownMenuItem>
@@ -231,8 +245,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
           <Card className="mb-8 border-red-200 bg-red-50">
             <CardContent className="pt-6">
               <p className="text-red-800">{error}</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => fetchRepos(1, searchTerm)}
                 className="mt-2"
               >
@@ -266,17 +280,18 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               <CardContent className="pt-6 text-center py-12">
                 <Github className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {searchTerm || filterLanguage ? "No repositories found" : "No repositories"}
+                  {searchTerm || filterLanguage
+                    ? "No repositories found"
+                    : "No repositories"}
                 </h3>
                 <p className="text-gray-600">
-                  {searchTerm && filterLanguage 
+                  {searchTerm && filterLanguage
                     ? `No repositories match "${searchTerm}" in ${filterLanguage}`
-                    : searchTerm 
+                    : searchTerm
                     ? `No repositories match "${searchTerm}"`
                     : filterLanguage
                     ? `No repositories found for ${filterLanguage}`
-                    : "You don't have any repositories yet."
-                  }
+                    : "You don't have any repositories yet."}
                 </p>
               </CardContent>
             </Card>
@@ -284,64 +299,64 @@ export default function DashboardClient({ session }: DashboardClientProps) {
             filteredRepos.map((repo) => (
               <Card key={repo.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
-                <CardTitle>
+                  <CardTitle>
                     <div className="flex items-center gap-2">
-                        <Link 
-                          href={`/repo/${repo.owner.login}/${repo.name}`}
-                          className="text-lg font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {repo.full_name}
-                        </Link>
-                        {repo.private ? (
-                          <Lock className="w-4 h-4 text-gray-500" />
-                        ) : (
-                          <Globe className="w-4 h-4 text-gray-500" />
-                        )}
-                        <a
-                          href={`https://github.com/${repo.full_name}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
-                </CardTitle>
-                <CardDescription className="pt-1">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      {repo.description && (
-                        <p className="text-gray-700 mb-3 line-clamp-2">
-                          {repo.description}
-                        </p>
+                      <Link
+                        href={`/repo/${repo.owner.login}/${repo.name}`}
+                        className="text-lg font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {repo.full_name}
+                      </Link>
+                      {repo.private ? (
+                        <Lock className="w-4 h-4 text-gray-500" />
+                      ) : (
+                        <Globe className="w-4 h-4 text-gray-500" />
                       )}
-                      
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        {repo.language && (
-                          <span className="flex items-center gap-1">
-                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                            {repo.language}
-                          </span>
+                      <a
+                        href={`https://github.com/${repo.full_name}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </CardTitle>
+                  <CardDescription className="pt-1">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        {repo.description && (
+                          <p className="text-gray-700 mb-3 line-clamp-2">
+                            {repo.description}
+                          </p>
                         )}
-                        
-                        <span className="flex items-center gap-1">
-                          <Star className="w-4 h-4" />
-                          {repo.stargazers_count}
-                        </span>
-                        
-                        <span className="flex items-center gap-1">
-                          <GitFork className="w-4 h-4" />
-                          {repo.forks_count}
-                        </span>
-                        
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          Updated {formatDate(repo.updated_at)}
-                        </span>
+
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          {repo.language && (
+                            <span className="flex items-center gap-1">
+                              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                              {repo.language}
+                            </span>
+                          )}
+
+                          <span className="flex items-center gap-1">
+                            <Star className="w-4 h-4" />
+                            {repo.stargazers_count}
+                          </span>
+
+                          <span className="flex items-center gap-1">
+                            <GitFork className="w-4 h-4" />
+                            {repo.forks_count}
+                          </span>
+
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            Updated {formatDate(repo.updated_at)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardDescription>
+                  </CardDescription>
                 </CardHeader>
               </Card>
             ))
@@ -351,8 +366,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         {/* Load More */}
         {hasNextPage && repos.length > 0 && (
           <div className="mt-8 text-center">
-            <Button 
-              onClick={loadMore} 
+            <Button
+              onClick={loadMore}
               disabled={loading}
               variant="outline"
               className="gap-2"
@@ -372,12 +387,11 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-gray-200 text-center text-sm text-gray-500">
           <p>
-            Showing {filteredRepos.length} of {repos.length} repositories • 
-            Powered by GitHub API • 
-            Built with Next.js
+            Showing {filteredRepos.length} of {repos.length} repositories •
+            Powered by GitHub API • Built with Next.js
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
