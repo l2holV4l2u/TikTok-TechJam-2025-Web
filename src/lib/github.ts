@@ -1,4 +1,3 @@
-import { z } from "zod"
 
 // GitHub API types
 export interface GitHubRepo {

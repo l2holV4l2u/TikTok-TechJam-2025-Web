@@ -5,7 +5,6 @@ import { Session } from "next-auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileNode } from "@/lib/tree"
 import { getLanguageFromExtension, getFileExtension } from "@/lib/tree"
@@ -116,13 +115,13 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
     setExpandedFolders(newExpanded)
   }
 
-  const copyToClipboard = async () => {
-    if (fileContent?.content) {
-      await navigator.clipboard.writeText(fileContent.content)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
+  // const copyToClipboard = async () => {
+  //   if (fileContent?.content) {
+  //     await navigator.clipboard.writeText(fileContent.content)
+  //     setCopied(true)
+  //     setTimeout(() => setCopied(false), 2000)
+  //   }
+  // }
 
   const renderFileTree = (nodes: FileNode[], depth = 0) => {
     return nodes.map((node) => (
@@ -170,90 +169,90 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
     ))
   }
 
-  const renderFileContent = () => {
-    if (!fileContent) return null
+  // const renderFileContent = () => {
+  //   if (!fileContent) return null
 
-    if (fileContent.isBinary || !fileContent.isText) {
-      return (
-        <div className="p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Binary file or preview not supported
-          </h3>
-          <p className="text-gray-600 mb-4">
-            This file type cannot be displayed in the browser.
-          </p>
-          <Button asChild>
-            <a href={fileContent.downloadUrl} target="_blank" rel="noopener noreferrer">
-              <Download className="w-4 h-4 mr-2" />
-              Download file
-            </a>
-          </Button>
-        </div>
-      )
-    }
+  //   if (fileContent.isBinary || !fileContent.isText) {
+  //     return (
+  //       <div className="p-8 text-center">
+  //         <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+  //         <h3 className="text-lg font-medium text-gray-900 mb-2">
+  //           Binary file or preview not supported
+  //         </h3>
+  //         <p className="text-gray-600 mb-4">
+  //           This file type cannot be displayed in the browser.
+  //         </p>
+  //         <Button asChild>
+  //           <a href={fileContent.downloadUrl} target="_blank" rel="noopener noreferrer">
+  //             <Download className="w-4 h-4 mr-2" />
+  //             Download file
+  //           </a>
+  //         </Button>
+  //       </div>
+  //     )
+  //   }
 
-    const extension = getFileExtension(fileContent.path)
-    const language = getLanguageFromExtension(extension)
-    const isMarkdown = extension === 'md' || extension === 'markdown'
+  //   const extension = getFileExtension(fileContent.path)
+  //   const language = getLanguageFromExtension(extension)
+  //   const isMarkdown = extension === 'md' || extension === 'markdown'
 
-    return (
-      <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-          <div className="flex items-center gap-2">
-            <File className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">{fileContent.path}</span>
-            <span className="text-sm text-gray-500">
-              {formatBytes(fileContent.size)}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={copyToClipboard}>
-              {copied ? (
-                <Check className="w-4 h-4 mr-2" />
-              ) : (
-                <Copy className="w-4 h-4 mr-2" />
-              )}
-              {copied ? "Copied!" : "Copy"}
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={fileContent.downloadUrl} target="_blank" rel="noopener noreferrer">
-                <Download className="w-4 h-4 mr-2" />
-                Download
-              </a>
-            </Button>
-          </div>
-        </div>
+  //   return (
+  //     <div className="h-full flex flex-col">
+  //       <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+  //         <div className="flex items-center gap-2">
+  //           <File className="w-5 h-5 text-gray-500" />
+  //           <span className="font-medium">{fileContent.path}</span>
+  //           <span className="text-sm text-gray-500">
+  //             {formatBytes(fileContent.size)}
+  //           </span>
+  //         </div>
+  //         <div className="flex items-center gap-2">
+  //           <Button variant="outline" size="sm" onClick={copyToClipboard}>
+  //             {copied ? (
+  //               <Check className="w-4 h-4 mr-2" />
+  //             ) : (
+  //               <Copy className="w-4 h-4 mr-2" />
+  //             )}
+  //             {copied ? "Copied!" : "Copy"}
+  //           </Button>
+  //           <Button variant="outline" size="sm" asChild>
+  //             <a href={fileContent.downloadUrl} target="_blank" rel="noopener noreferrer">
+  //               <Download className="w-4 h-4 mr-2" />
+  //               Download
+  //             </a>
+  //           </Button>
+  //         </div>
+  //       </div>
         
-        <ScrollArea className="flex-1">
-          <div className="p-0">
-            {isMarkdown ? (
-              <div className="prose max-w-none p-6">
-                {/* You could add a markdown renderer here */}
-                <pre className="whitespace-pre-wrap text-sm">
-                  {fileContent.content}
-                </pre>
-              </div>
-            ) : (
-              <SyntaxHighlighter
-                language={language}
-                style={oneLight}
-                showLineNumbers={true}
-                wrapLines={true}
-                customStyle={{
-                  margin: 0,
-                  fontSize: '14px',
-                  lineHeight: '1.5',
-                }}
-              >
-                {fileContent.content || ""}
-              </SyntaxHighlighter>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    )
-  }
+  //       <ScrollArea className="flex-1">
+  //         <div className="p-0">
+  //           {isMarkdown ? (
+  //             <div className="prose max-w-none p-6">
+  //               {/* You could add a markdown renderer here */}
+  //               <pre className="whitespace-pre-wrap text-sm">
+  //                 {fileContent.content}
+  //               </pre>
+  //             </div>
+  //           ) : (
+  //             <SyntaxHighlighter
+  //               language={language}
+  //               style={oneLight}
+  //               showLineNumbers={true}
+  //               wrapLines={true}
+  //               customStyle={{
+  //                 margin: 0,
+  //                 fontSize: '14px',
+  //                 lineHeight: '1.5',
+  //               }}
+  //             >
+  //               {fileContent.content || ""}
+  //             </SyntaxHighlighter>
+  //           )}
+  //         </div>
+  //       </ScrollArea>
+  //     </div>
+  //   )
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -320,7 +319,6 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-300px)]">
                 <div className="p-2">
                   {loading ? (
                     Array.from({ length: 10 }).map((_, i) => (
@@ -337,12 +335,11 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
                     renderFileTree(fileTree)
                   )}
                 </div>
-              </ScrollArea>
             </CardContent>
           </Card>
 
           {/* File Content */}
-          <Card className="lg:col-span-2">
+          {/* <Card className="lg:col-span-2">
             <CardContent className="p-0 h-full">
               {loadingFile ? (
                 <div className="flex items-center justify-center h-full">
@@ -367,7 +364,7 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </div>

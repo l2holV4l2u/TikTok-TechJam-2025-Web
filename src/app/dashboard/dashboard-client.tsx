@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { GitHubRepo } from "@/lib/github"
 import { formatDistanceToNow } from "date-fns"
 import { 
@@ -21,8 +25,9 @@ import {
   Globe, 
   LogOut,
   ExternalLink,
-  ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Filter,
+  ChevronDown
 } from "lucide-react"
 import Link from "next/link"
 
@@ -46,7 +51,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
-
+  const [filterLanguage, setFilterLanguage] = useState<string | null>(null)
   const fetchRepos = async (page = 1, search = "") => {
     try {
       setLoading(page === 1)
@@ -106,6 +111,14 @@ export default function DashboardClient({ session }: DashboardClientProps) {
     }
   }
 
+  // Filter repositories based on selected language
+  const filteredRepos = repos.filter((repo) => {
+    if (filterLanguage && repo.language !== filterLanguage) {
+      return false
+    }
+    return true
+  })
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -145,21 +158,70 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               Search Repositories
             </CardTitle>
             <CardDescription>
-              Find repositories by name or description
+              Find repositories by name, description, or filter by programming language
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Search repositories..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
-              />
-              <Button type="submit" disabled={searching}>
-                {searching ? "Searching..." : "Search"}
-              </Button>
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Search repositories..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={searching}>
+                  {searching ? "Searching..." : "Search"}
+                </Button>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <label className="text-sm font-medium text-gray-700">
+                  Filter by language:
+                </label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-48 justify-between"
+                    >
+                      {filterLanguage || "All languages"}
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48">
+                    <DropdownMenuItem 
+                      onSelect={() => setFilterLanguage(null)}
+                      className={filterLanguage === null ? "bg-accent" : ""}
+                    >
+                      All languages
+                    </DropdownMenuItem>
+                    {Array.from(new Set(repos.map(repo => repo.language).filter((lang): lang is string => Boolean(lang))))
+                      .sort()
+                      .map(language => (
+                        <DropdownMenuItem 
+                          key={language}
+                          onSelect={() => setFilterLanguage(language)}
+                          className={filterLanguage === language ? "bg-accent" : ""}
+                        >
+                          {language}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {filterLanguage && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setFilterLanguage(null)}
+                    className="text-xs px-2 py-1 h-7"
+                  >
+                    Clear filter
+                  </Button>
+                )}
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -181,7 +243,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         )}
 
         {/* Repository List */}
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {loading && repos.length === 0 ? (
             // Loading skeletons
             Array.from({ length: 6 }).map((_, i) => (
@@ -199,28 +261,31 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                 </CardContent>
               </Card>
             ))
-          ) : repos.length === 0 ? (
-            <Card>
+          ) : filteredRepos.length === 0 ? (
+            <Card className="lg:col-span-2">
               <CardContent className="pt-6 text-center py-12">
                 <Github className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {searchTerm ? "No repositories found" : "No repositories"}
+                  {searchTerm || filterLanguage ? "No repositories found" : "No repositories"}
                 </h3>
                 <p className="text-gray-600">
-                  {searchTerm 
+                  {searchTerm && filterLanguage 
+                    ? `No repositories match "${searchTerm}" in ${filterLanguage}`
+                    : searchTerm 
                     ? `No repositories match "${searchTerm}"`
+                    : filterLanguage
+                    ? `No repositories found for ${filterLanguage}`
                     : "You don't have any repositories yet."
                   }
                 </p>
               </CardContent>
             </Card>
           ) : (
-            repos.map((repo) => (
+            filteredRepos.map((repo) => (
               <Card key={repo.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                <CardHeader>
+                <CardTitle>
+                    <div className="flex items-center gap-2">
                         <Link 
                           href={`/repo/${repo.owner.login}/${repo.name}`}
                           className="text-lg font-semibold text-blue-600 hover:text-blue-800 hover:underline"
@@ -241,7 +306,10 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                           <ExternalLink className="w-4 h-4" />
                         </a>
                       </div>
-                      
+                </CardTitle>
+                <CardDescription className="pt-1">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
                       {repo.description && (
                         <p className="text-gray-700 mb-3 line-clamp-2">
                           {repo.description}
@@ -273,7 +341,8 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                       </div>
                     </div>
                   </div>
-                </CardContent>
+                </CardDescription>
+                </CardHeader>
               </Card>
             ))
           )}
@@ -303,7 +372,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-gray-200 text-center text-sm text-gray-500">
           <p>
-            Showing {repos.length} repositories • 
+            Showing {filteredRepos.length} of {repos.length} repositories • 
             Powered by GitHub API • 
             Built with Next.js
           </p>
