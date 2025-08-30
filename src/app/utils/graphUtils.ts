@@ -1,62 +1,61 @@
-import { Edge, MarkerType, Node, Position } from "@xyflow/react";
-import { GraphEdge, GraphNode } from "../types/graphTypes";
+import { Edge, MarkerType, Node } from "@xyflow/react";
+import { GraphEdge } from "../types/graphTypes";
 
 // Auto-layout function for hierarchical arrangement
 export function getLayoutedElements(nodes: Node[], edges: Edge[]) {
+  if (nodes.length === 0) return { nodes, edges };
+
   const incomingEdges = new Map<string, string[]>();
   const outgoingEdges = new Map<string, string[]>();
 
-  // Build adjacency lists
   edges.forEach((edge) => {
-    if (!incomingEdges.has(edge.target)) incomingEdges.set(edge.target, []);
-    if (!outgoingEdges.has(edge.source)) outgoingEdges.set(edge.source, []);
-
-    incomingEdges.get(edge.target)!.push(edge.source);
-    outgoingEdges.get(edge.source)!.push(edge.target);
+    (
+      incomingEdges.get(edge.target) ??
+      incomingEdges.set(edge.target, []).get(edge.target)
+    )?.push(edge.source);
+    (
+      outgoingEdges.get(edge.source) ??
+      outgoingEdges.set(edge.source, []).get(edge.source)
+    )?.push(edge.target);
   });
 
-  // Find root nodes (no incoming edges)
-  const rootNodes = nodes.filter((node) => !incomingEdges.has(node.id));
+  const rootNodes = nodes.filter((n) => !incomingEdges.has(n.id));
 
-  // Assign levels using BFS
+  // BFS to assign levels
   const levels = new Map<string, number>();
-  const queue = rootNodes.map((node) => ({ id: node.id, level: 0 }));
+  const queue = rootNodes.map((n) => ({ id: n.id, level: 0 }));
 
-  while (queue.length > 0) {
+  while (queue.length) {
     const { id, level } = queue.shift()!;
+    if (levels.has(id)) continue;
+    levels.set(id, level);
 
-    if (!levels.has(id) || levels.get(id)! < level) {
-      levels.set(id, level);
-
-      const children = outgoingEdges.get(id) || [];
-      children.forEach((childId) => {
-        queue.push({ id: childId, level: level + 1 });
-      });
-    }
+    (outgoingEdges.get(id) ?? []).forEach((child) =>
+      queue.push({ id: child, level: level + 1 })
+    );
   }
 
-  // Group nodes by level
-  const levelGroups = new Map<number, string[]>();
-  levels.forEach((level, nodeId) => {
-    if (!levelGroups.has(level)) levelGroups.set(level, []);
-    levelGroups.get(level)!.push(nodeId);
+  const grouped = new Map<number, string[]>();
+  levels.forEach((lvl, id) => {
+    if (!grouped.has(lvl)) grouped.set(lvl, []);
+    grouped.get(lvl)!.push(id);
   });
 
-  // Position nodes
   const levelSpacing = 200;
   const nodeSpacing = 180;
-  const layoutedNodes = nodes.map((node) => {
-    const level = levels.get(node.id) || 0;
-    const nodesInLevel = levelGroups.get(level) || [];
-    const indexInLevel = nodesInLevel.indexOf(node.id);
-    const totalInLevel = nodesInLevel.length;
 
-    const x = (indexInLevel - (totalInLevel - 1) / 2) * nodeSpacing;
-    const y = level * levelSpacing;
+  const layoutedNodes = nodes.map((node) => {
+    const lvl = levels.get(node.id) ?? 0;
+    const ids = grouped.get(lvl) ?? [];
+    const idx = ids.indexOf(node.id);
+    const total = ids.length;
 
     return {
       ...node,
-      position: { x, y },
+      position: {
+        x: (idx - (total - 1) / 2) * nodeSpacing,
+        y: lvl * levelSpacing,
+      },
     };
   });
 
