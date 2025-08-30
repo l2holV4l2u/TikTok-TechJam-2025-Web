@@ -36,17 +36,23 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
       return;
     }
 
+    console.log("analyzeSelected called with paths:", Array.from(selectedPaths));
+
     try {
       setLoadingAnalysis(true);
+
+      const requestBody = {
+        owner,
+        repo: name,
+        includePaths: Array.from(selectedPaths),
+      };
+      
+      console.log("Sending request body:", requestBody);
 
       const response = await fetch("/api/analyze/github", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          owner,
-          repo: name,
-          includePaths: Array.from(selectedPaths),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -57,19 +63,39 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
       }
 
       const analysis = await response.json();
+      
+      // console.log("Received analysis result:", analysis);
+      // console.log("Analysis selection info:", analysis.selection);
+      // console.log("Analysis file count:", analysis.repo?.fileCount);
 
       if (analysis.nodes && analysis.edges) {
+        // Convert the analysis types to graph types (same as in FileTab)
+        const graphNodes = analysis.nodes.map((node: any) => ({
+          id: node.id,
+          kind: node.kind,
+          definedIn: node.definedIn,
+          usedIn: node.usedIn.map((usage: any) => `${usage.file}:${usage.line}`)
+        }));
+        
+        const graphEdges = analysis.edges.map((edge: any) => ({
+          source: edge.source,
+          target: edge.target,
+          type: edge.kind
+        }));
+        
         setGraph({
-          nodes: analysis.nodes,
-          edges: analysis.edges,
+          nodes: graphNodes,
+          edges: graphEdges,
         });
+        setInputNodes(graphNodes);
+        setInputEdges(graphEdges);
       }
 
-      toast.success("Analyzed selection", {
-        description: `Included ${analysis.nodes?.length ?? 0} nodes, ${
-          analysis.edges?.length ?? 0
-        } edges`,
-      });
+      // toast.success("Analyzed selection", {
+      //   description: `Selected ${Array.from(selectedPaths).join(', ')} - Found ${analysis.nodes?.length ?? 0} nodes, ${
+      //     analysis.edges?.length ?? 0
+      //   } edges from ${analysis.repo?.fileCount ?? 0} files`,
+      // });
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to analyze selection";

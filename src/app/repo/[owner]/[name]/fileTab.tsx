@@ -210,56 +210,6 @@ export function FileTab({
     setSelectedPaths(next);
   };
 
-  // ✅ NEW: Analyze only selected paths (folders or files)
-  const analyzeSelected = async () => {
-    if (selectedPaths.size === 0) {
-      toast.message("Select files or folders first");
-      return;
-    }
-
-    try {
-      setLoadingAnalysis(true);
-
-      const response = await fetch("/api/analyze/github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          owner,
-          repo: name,
-          includePaths: Array.from(selectedPaths),
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(
-          `Selection analysis failed: ${response.statusText} ${errText}`
-        );
-      }
-
-      const analysis = await response.json();
-
-      if (analysis.nodes && analysis.edges) {
-        setGraph({
-          nodes: analysis.nodes,
-          edges: analysis.edges,
-        });
-      }
-
-      toast.success("Analyzed selection", {
-        description: `Included ${analysis.nodes?.length ?? 0} nodes, ${
-          analysis.edges?.length ?? 0
-        } edges`,
-      });
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to analyze selection";
-      toast.error("Graph analysis failed", { description: msg });
-    } finally {
-      setLoadingAnalysis(false);
-    }
-  };
-
   const renderFileTree = (nodes: FileNode[], depth = 0) => {
     return nodes.map((node) => (
       <div key={node.path}>
