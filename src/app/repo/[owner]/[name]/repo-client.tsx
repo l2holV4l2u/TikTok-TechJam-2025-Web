@@ -62,8 +62,12 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
   );
 
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
+ // graph
   const [chatGraph, setChatGraph] = useState<DependencyGraphProps | null>(null);
   const [graph,setGraph] = useState<DependencyGraphProps | null>(null);
+  const [loadingChatGraph, setLoadingChatGraph] = useState(false);
+  const [loadingGraph, setLoadingGraph] = useState(false);
+
   const repoFullName = `${owner}/${name}`;
   const fetchFileTree = async () => {
     try {
@@ -116,16 +120,16 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
     }
   };
 
-  // const fetchChatGraph = async () => {
-  //   try{
-  //     const response = await analyzeGraph();
-  //     setChatGraph(response);
-  //   } catch (err) {
-  //     setError(
-  //       err instanceof Error ? err.message : "Failed to analyze dependency graph"
-  //     );
-  //   }
-  // }
+  const fetchChatGraph = async () => {
+    try{
+      const response = await analyzeGraph(graph!);
+      // setChatGraph(response);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to analyze dependency graph"
+      );
+    }
+  }
   useEffect(() => {
     fetchFileTree();
   }, [owner, name]);

@@ -1,4 +1,5 @@
 // app/api/knit-fix/route.ts
+import { DependencyGraphProps } from "@/app/types/graphTypes";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -6,9 +7,8 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export const runtime = "nodejs";
 
-export async function analyzeGraph(req: NextRequest) {
+export async function analyzeGraph(input : DependencyGraphProps) {
   try {
-    const input = await req.json();
 
     // Minimal guard
     if (!input || typeof input !== "object") {
