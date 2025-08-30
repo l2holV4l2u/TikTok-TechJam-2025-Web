@@ -13,11 +13,15 @@ export function Sidebar({
   name,
   setGraph,
   setLoadingAnalysis,
+  selectedPaths,
+  setSelectedPaths,
 }: {
   loading: boolean;
   fileTree: FileNode[];
   setGraph: Dispatch<SetStateAction<DependencyGraphProps | null>>;
   setLoadingAnalysis: Dispatch<SetStateAction<boolean>>;
+  selectedPaths: Set<string>;
+  setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
 } & RepoClientProps) {
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
   const toggleFileTree = () => {
@@ -70,6 +74,8 @@ export function Sidebar({
                   name={name}
                   setGraph={setGraph}
                   setLoadingAnalysis={setLoadingAnalysis}
+                  selectedPaths={selectedPaths}
+                  setSelectedPaths={setSelectedPaths}
                 />
               </TabsContent>
             </div>

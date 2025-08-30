@@ -10,6 +10,12 @@ import { ChevronDown, ChevronRight, File, Folder } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { toast } from "sonner";
 
+// ✅ NEW
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import type { CheckedState } from "@radix-ui/react-checkbox";
+import type React from "react";
+
 export function FileTab({
   loading,
   fileTree,
@@ -17,11 +23,15 @@ export function FileTab({
   name,
   setGraph,
   setLoadingAnalysis,
+  selectedPaths,
+  setSelectedPaths,
 }: {
   loading: boolean;
   fileTree: FileNode[];
   setGraph: Dispatch<SetStateAction<DependencyGraphProps | null>>;
   setLoadingAnalysis: Dispatch<SetStateAction<boolean>>;
+  selectedPaths: Set<string>;
+  setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
 } & RepoClientProps) {
   const [fileAnalysisCache, setFileAnalysisCache] = useState<Map<string, any>>(
     new Map()
@@ -30,6 +40,7 @@ export function FileTab({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
+
   const analyzeFile = async (
     fileData: FileContentResponse,
     owner: string,
@@ -38,9 +49,22 @@ export function FileTab({
     if (fileAnalysisCache.has(fileData.path)) {
       const cachedAnalysis = fileAnalysisCache.get(fileData.path);
       if (cachedAnalysis.nodes && cachedAnalysis.edges) {
+        const graphNodes = cachedAnalysis.nodes.map((node: any) => ({
+          id: node.id,
+          kind: node.kind,
+          definedIn: node.definedIn,
+          usedIn: node.usedIn.map((usage: any) => `${usage.file}:${usage.line}`)
+        }));
+        
+        const graphEdges = cachedAnalysis.edges.map((edge: any) => ({
+          source: edge.source,
+          target: edge.target,
+          type: edge.kind
+        }));
+        
         setGraph({
-          nodes: cachedAnalysis.nodes,
-          edges: cachedAnalysis.edges,
+          nodes: graphNodes,
+          edges: graphEdges,
         });
       }
       return cachedAnalysis;
@@ -67,16 +91,30 @@ export function FileTab({
       }
 
       const analysis: AnalysisResult = await response.json();
-      analysis;
-      setFileAnalysisCache((prev) =>
-        new Map(prev).set(fileData.path, analysis)
-      );
+      setFileAnalysisCache((prev) => {
+        const newCache = new Map(prev);
+        newCache.set(fileData.path, analysis);
+        return newCache;
+      });
 
       // Update graph with analysis results
       if (analysis.nodes && analysis.edges) {
+        const graphNodes = analysis.nodes.map((node: any) => ({
+          id: node.id,
+          kind: node.kind,
+          definedIn: node.definedIn,
+          usedIn: node.usedIn.map((usage: any) => `${usage.file}:${usage.line}`)
+        }));
+        
+        const graphEdges = analysis.edges.map((edge: any) => ({
+          source: edge.source,
+          target: edge.target,
+          type: edge.kind
+        }));
+        
         setGraph({
-          nodes: analysis.nodes,
-          edges: analysis.edges,
+          nodes: graphNodes,
+          edges: graphEdges,
         });
       }
 
@@ -128,6 +166,100 @@ export function FileTab({
     setExpandedFolders(newExpanded);
   };
 
+  // ====== ✅ NEW: Selection helpers (folders/files with indeterminate) ======
+  const hasSelectedAncestor = (path: string) => {
+    const parts = path.split("/");
+    for (let i = parts.length - 1; i >= 1; i--) {
+      const parent = parts.slice(0, i).join("/");
+      if (selectedPaths.has(parent)) return true;
+    }
+    return false;
+  };
+
+  const getFolderSelectionState = (
+    node: FileNode
+  ): boolean | "indeterminate" => {
+    const selfSelected = selectedPaths.has(node.path);
+    if (selfSelected) return true;
+
+    const anySelected = (n: FileNode): boolean => {
+      if (n.type === "file") {
+        return selectedPaths.has(n.path) || hasSelectedAncestor(n.path);
+      }
+      return (n.children ?? []).some(anySelected) || selectedPaths.has(n.path);
+    };
+
+    const hasAny = (node.children ?? []).some(anySelected);
+    return hasAny ? "indeterminate" : false;
+  };
+
+  const onFolderCheckbox = (node: FileNode, checked: CheckedState) => {
+    const next = new Set(selectedPaths);
+    if (checked === true) next.add(node.path);
+    else next.delete(node.path);
+    setSelectedPaths(next);
+  };
+
+  const getFileChecked = (path: string) =>
+    selectedPaths.has(path) || hasSelectedAncestor(path);
+
+  const onFileCheckbox = (node: FileNode, checked: CheckedState) => {
+    const next = new Set(selectedPaths);
+    if (checked === true) next.add(node.path);
+    else next.delete(node.path);
+    setSelectedPaths(next);
+  };
+
+  // ✅ NEW: Analyze only selected paths (folders or files)
+  const analyzeSelected = async () => {
+    if (selectedPaths.size === 0) {
+      toast.message("Select files or folders first");
+      return;
+    }
+
+    try {
+      setLoadingAnalysis(true);
+
+      const response = await fetch("/api/analyze/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner,
+          repo: name,
+          includePaths: Array.from(selectedPaths),
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(
+          `Selection analysis failed: ${response.statusText} ${errText}`
+        );
+      }
+
+      const analysis = await response.json();
+
+      if (analysis.nodes && analysis.edges) {
+        setGraph({
+          nodes: analysis.nodes,
+          edges: analysis.edges,
+        });
+      }
+
+      toast.success("Analyzed selection", {
+        description: `Included ${analysis.nodes?.length ?? 0} nodes, ${
+          analysis.edges?.length ?? 0
+        } edges`,
+      });
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to analyze selection";
+      toast.error("Graph analysis failed", { description: msg });
+    } finally {
+      setLoadingAnalysis(false);
+    }
+  };
+
   const renderFileTree = (nodes: FileNode[], depth = 0) => {
     return nodes.map((node) => (
       <div key={node.path}>
@@ -146,6 +278,23 @@ export function FileTab({
             }
           }}
         >
+          {/* ✅ Checkbox column */}
+          {node.type === "folder" ? (
+            <Checkbox
+              checked={getFolderSelectionState(node)}
+              onCheckedChange={(v: CheckedState) => onFolderCheckbox(node, v)}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            />
+          ) : (
+            <Checkbox
+              checked={getFileChecked(node.path)}
+              disabled={hasSelectedAncestor(node.path)}
+              onCheckedChange={(v: CheckedState) => onFileCheckbox(node, v)}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            />
+          )}
+
+          {/* Icon + name */}
           {node.type === "folder" ? (
             <>
               {expandedFolders.has(node.path) ? (
@@ -161,7 +310,9 @@ export function FileTab({
               <File className="w-4 h-4 text-gray-500" />
             </>
           )}
+
           <span className="flex-1 truncate">{node.name}</span>
+
           {node.type === "file" && node.size && (
             <span className="text-xs text-gray-400 ml-2">
               {formatBytes(node.size)}
@@ -177,8 +328,9 @@ export function FileTab({
       </div>
     ));
   };
+
   return (
-    <Tabs>
+    <Tabs defaultValue="tree" className="flex-1 flex flex-col min-h-0">
       <TabsList className="border-b border-gray-100 flex-shrink-0">
         <TabsTrigger value="tree" className="flex-1 text-sm">
           Folder Tree
@@ -188,6 +340,7 @@ export function FileTab({
         </TabsTrigger>
       </TabsList>
 
+      {/* Tree tab */}
       <TabsContent value="tree" className="flex-1 min-h-0">
         <ScrollArea className="h-full">
           <div className="p-2">
@@ -209,6 +362,7 @@ export function FileTab({
         </ScrollArea>
       </TabsContent>
 
+      {/* Flat list tab */}
       <TabsContent value="flat" className="flex-1 min-h-0">
         <ScrollArea className="h-full">
           <div className="p-2 overflow-hidden">
@@ -249,8 +403,22 @@ export function FileTab({
                     }`}
                     onClick={() => fetchFileContent(file.path, file.sha!)}
                   >
+                    {/* ✅ Checkbox for flat file list too */}
+                    <Checkbox
+                      checked={getFileChecked(file.path)}
+                      disabled={hasSelectedAncestor(file.path)}
+                      onCheckedChange={(v: CheckedState) =>
+                        onFileCheckbox(file, v)
+                      }
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                    />
                     <File className="w-4 h-4 text-gray-500" />
                     <span className="flex-1 truncate">{file.name}</span>
+                    {file.size && (
+                      <span className="text-xs text-gray-400 ml-2">
+                        {formatBytes(file.size)}
+                      </span>
+                    )}
                   </div>
                 ))
             )}

@@ -23,7 +23,58 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const [loadingImprovement, setLoadingImprovement] = useState(false);
   const [improvementResult, setImprovementResult] = useState<any>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const repoFullName = `${owner}/${name}`;
+
+  // ✅ Analyze only selected paths (folders or files)
+  const analyzeSelected = async () => {
+    if (selectedPaths.size === 0) {
+      toast.message("Select files or folders first");
+      return;
+    }
+
+    try {
+      setLoadingAnalysis(true);
+
+      const response = await fetch("/api/analyze/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner,
+          repo: name,
+          includePaths: Array.from(selectedPaths),
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(
+          `Selection analysis failed: ${response.statusText} ${errText}`
+        );
+      }
+
+      const analysis = await response.json();
+
+      if (analysis.nodes && analysis.edges) {
+        setGraph({
+          nodes: analysis.nodes,
+          edges: analysis.edges,
+        });
+      }
+
+      toast.success("Analyzed selection", {
+        description: `Included ${analysis.nodes?.length ?? 0} nodes, ${
+          analysis.edges?.length ?? 0
+        } edges`,
+      });
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to analyze selection";
+      toast.error("Graph analysis failed", { description: msg });
+    } finally {
+      setLoadingAnalysis(false);
+    }
+  };
 
   // Navigation functions for graph views
   const handleViewOriginal = () => {
@@ -213,18 +264,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           </div>
 
           <div className="flex gap-2">
-            {/* Analyze selected button */}
-            <Button
-              size="sm"
-              onClick={analyzeSelected}
-              disabled={loadingAnalysis || selectedPaths.size === 0}
-            >
-              <Network className="w-4 h-4 mr-2" />
-              {loadingAnalysis
-                ? "Analyzing..."
-                : `Analyze Selected (${selectedPaths.size})`}
-            </Button>
-
             <Button
               variant="outline"
               size="sm"
@@ -233,6 +272,14 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             >
               <Network className="w-4 h-4 mr-2" />
               {loadingAnalysis ? "Analyzing..." : "Analyze Repository"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={analyzeSelected}
+              disabled={selectedPaths.size === 0}
+            >
+                  Analyze Selected ({selectedPaths.size})
             </Button>
             <Button
               variant="outline"
@@ -279,6 +326,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           name={name}
           setGraph={setGraph}
           setLoadingAnalysis={setLoadingAnalysis}
+          selectedPaths={selectedPaths}
+          setSelectedPaths={setSelectedPaths}
         />
 
         {/* Main Content Area */}
