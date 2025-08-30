@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type React from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Button } from "@/components/ui/button";
 import { FileNode } from "@/lib/tree";
 import { Github, ArrowLeft, Eye, Network, Wand2 } from "lucide-react";
@@ -210,7 +212,19 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-2">
+            {/* Analyze selected button */}
+            <Button
+              size="sm"
+              onClick={analyzeSelected}
+              disabled={loadingAnalysis || selectedPaths.size === 0}
+            >
+              <Network className="w-4 h-4 mr-2" />
+              {loadingAnalysis
+                ? "Analyzing..."
+                : `Analyze Selected (${selectedPaths.size})`}
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -313,8 +327,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                   </p>
                   <p className="text-sm text-gray-500 mb-4">
                     Click "Analyze Repository" to see the full dependency graph,
-                    or select a file and click "Analyze Current File" for
-                    single-file analysis.
+                    or select files/folders and click "Analyze Selected" for
+                    targeted analysis.
                   </p>
                   <Button
                     variant="outline"
