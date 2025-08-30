@@ -17,7 +17,6 @@ export type GraphEdge = {
 export type DependencyGraphProps = {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  className?: string;
 };
 
 export type CycleInfo = {

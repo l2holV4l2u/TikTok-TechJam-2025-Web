@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import type React from "react";
-import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Button } from "@/components/ui/button";
 import { FileNode } from "@/lib/tree";
 import { Github, ArrowLeft, Eye, Network, Wand2 } from "lucide-react";
@@ -13,6 +12,8 @@ import { DependencyGraphProps } from "@/app/types/graphTypes";
 import { FileTreeResponse, RepoClientProps } from "@/app/types/repoTypes";
 import { toast } from "sonner";
 import { Sidebar } from "./sidebar";
+import { useSetAtom } from "jotai";
+import { inputEdgesAtom, inputNodesAtom } from "@/lib/graphAtom";
 
 export default function RepoClient({ owner, name }: RepoClientProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
@@ -24,6 +25,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const [improvementResult, setImprovementResult] = useState<any>(null);
   const [showComparison, setShowComparison] = useState(false);
   const repoFullName = `${owner}/${name}`;
+  const setInputNodes = useSetAtom(inputNodesAtom);
+  const setInputEdges = useSetAtom(inputEdgesAtom);
 
   // Navigation functions for graph views
   const handleViewOriginal = () => {
@@ -37,6 +40,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
         nodes: improvementResult.improvedGraph.nodes,
         edges: improvementResult.improvedGraph.edges,
       });
+      setInputNodes(improvementResult.improvedGraph.nodes);
+      setInputEdges(improvementResult.improvedGraph.edges);
       setShowComparison(false);
     }
   };
@@ -95,6 +100,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           nodes: repoAnalysisCache.nodes,
           edges: repoAnalysisCache.edges,
         });
+        setInputNodes(repoAnalysisCache.nodes);
+        setInputEdges(repoAnalysisCache.edges);
       }
       return repoAnalysisCache;
     }
@@ -119,6 +126,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           nodes: analysis.nodes,
           edges: analysis.edges,
         });
+        setInputNodes(analysis.nodes);
+        setInputEdges(analysis.edges);
       }
 
       return analysis;
@@ -213,18 +222,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           </div>
 
           <div className="flex gap-2">
-            {/* Analyze selected button */}
-            <Button
-              size="sm"
-              onClick={analyzeSelected}
-              disabled={loadingAnalysis || selectedPaths.size === 0}
-            >
-              <Network className="w-4 h-4 mr-2" />
-              {loadingAnalysis
-                ? "Analyzing..."
-                : `Analyze Selected (${selectedPaths.size})`}
-            </Button>
-
             <Button
               variant="outline"
               size="sm"
@@ -317,7 +314,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                 </div>
               </div>
             ) : graph ? (
-              <DependencyGraph nodes={graph.nodes} edges={graph.edges} />
+              <DependencyGraph />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
