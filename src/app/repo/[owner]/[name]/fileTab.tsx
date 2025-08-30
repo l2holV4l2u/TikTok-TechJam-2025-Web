@@ -9,10 +9,7 @@ import { FileNode } from "@/lib/tree";
 import { ChevronDown, ChevronRight, File, Folder } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { toast } from "sonner";
-
-// ✅ NEW
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 import type React from "react";
 
@@ -36,7 +33,6 @@ export function FileTab({
   const [fileAnalysisCache, setFileAnalysisCache] = useState<Map<string, any>>(
     new Map()
   );
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
@@ -53,15 +49,17 @@ export function FileTab({
           id: node.id,
           kind: node.kind,
           definedIn: node.definedIn,
-          usedIn: node.usedIn.map((usage: any) => `${usage.file}:${usage.line}`)
+          usedIn: node.usedIn.map(
+            (usage: any) => `${usage.file}:${usage.line}`
+          ),
         }));
-        
+
         const graphEdges = cachedAnalysis.edges.map((edge: any) => ({
           source: edge.source,
           target: edge.target,
-          type: edge.kind
+          type: edge.kind,
         }));
-        
+
         setGraph({
           nodes: graphNodes,
           edges: graphEdges,
@@ -103,15 +101,17 @@ export function FileTab({
           id: node.id,
           kind: node.kind,
           definedIn: node.definedIn,
-          usedIn: node.usedIn.map((usage: any) => `${usage.file}:${usage.line}`)
+          usedIn: node.usedIn.map(
+            (usage: any) => `${usage.file}:${usage.line}`
+          ),
         }));
-        
+
         const graphEdges = analysis.edges.map((edge: any) => ({
           source: edge.source,
           target: edge.target,
-          type: edge.kind
+          type: edge.kind,
         }));
-        
+
         setGraph({
           nodes: graphNodes,
           edges: graphEdges,
@@ -143,7 +143,6 @@ export function FileTab({
       }
 
       const data: FileContentResponse = await response.json();
-      setSelectedFile(path);
 
       // Automatically analyze the file after fetching content
       analyzeFile(data, owner, name);
@@ -214,11 +213,7 @@ export function FileTab({
     return nodes.map((node) => (
       <div key={node.path}>
         <div
-          className={`flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors ${
-            selectedFile === node.path
-              ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
-              : "text-gray-700"
-          }`}
+          className="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors"
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
           onClick={() => {
             if (node.type === "folder") {
@@ -228,22 +223,6 @@ export function FileTab({
             }
           }}
         >
-          {/* ✅ Checkbox column */}
-          {node.type === "folder" ? (
-            <Checkbox
-              checked={getFolderSelectionState(node)}
-              onCheckedChange={(v: CheckedState) => onFolderCheckbox(node, v)}
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            />
-          ) : (
-            <Checkbox
-              checked={getFileChecked(node.path)}
-              disabled={hasSelectedAncestor(node.path)}
-              onCheckedChange={(v: CheckedState) => onFileCheckbox(node, v)}
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            />
-          )}
-
           {/* Icon + name */}
           {node.type === "folder" ? (
             <>
@@ -263,10 +242,19 @@ export function FileTab({
 
           <span className="flex-1 truncate">{node.name}</span>
 
-          {node.type === "file" && node.size && (
-            <span className="text-xs text-gray-400 ml-2">
-              {formatBytes(node.size)}
-            </span>
+          {node.type === "folder" ? (
+            <Checkbox
+              checked={getFolderSelectionState(node)}
+              onCheckedChange={(v: CheckedState) => onFolderCheckbox(node, v)}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            />
+          ) : (
+            <Checkbox
+              checked={getFileChecked(node.path)}
+              disabled={hasSelectedAncestor(node.path)}
+              onCheckedChange={(v: CheckedState) => onFileCheckbox(node, v)}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            />
           )}
         </div>
 
@@ -280,23 +268,25 @@ export function FileTab({
   };
 
   return (
-    <Tabs defaultValue="tree" className="flex-1 flex flex-col min-h-0">
-      <TabsList className="border-b border-gray-100 flex-shrink-0">
-        <TabsTrigger value="tree" className="flex-1 text-sm">
-          Folder Tree
-        </TabsTrigger>
-        <TabsTrigger value="flat" className="flex-1 text-sm">
-          Kotlin Files
-        </TabsTrigger>
-      </TabsList>
+    <Tabs defaultValue="tree" className="flex-1 flex flex-col min-h-0 gap-0">
+      <div className="w-full flex justify-center items-center">
+        <TabsList className="border-b border-gray-100 flex-1 h-8 mx-4 my-2">
+          <TabsTrigger value="tree" className="flex-1 text-xs">
+            Folder Tree
+          </TabsTrigger>
+          <TabsTrigger value="flat" className="flex-1 text-xs">
+            Kotlin Files
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
       {/* Tree tab */}
       <TabsContent value="tree" className="flex-1 min-h-0">
         <ScrollArea className="h-full">
-          <div className="p-2">
+          <div className="px-2">
             {loading ? (
               Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2 py-2 px-3">
+                <div key={i} className="flex items-center gap-2 px-2">
                   <Skeleton className="w-4 h-4" />
                   <Skeleton className="h-4 flex-1" />
                 </div>
@@ -315,13 +305,10 @@ export function FileTab({
       {/* Flat list tab */}
       <TabsContent value="flat" className="flex-1 min-h-0">
         <ScrollArea className="h-full">
-          <div className="p-2 overflow-hidden">
+          <div className="px-2 overflow-hidden">
             {loading ? (
               Array.from({ length: 10 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 py-2 px-3 min-w-0"
-                >
+                <div key={i} className="flex items-center gap-2 px-2 min-w-0">
                   <Skeleton className="w-4 h-4 flex-shrink-0" />
                   <Skeleton className="h-4 flex-1 min-w-0" />
                 </div>
@@ -346,14 +333,10 @@ export function FileTab({
                 .map((file) => (
                   <div
                     key={file.path}
-                    className={`flex items-center gap-2 py-2 px-3 hover:bg-gray-50 cursor-pointer text-sm transition-colors min-w-0 ${
-                      selectedFile === file.path
-                        ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
-                        : "text-gray-700"
-                    }`}
-                    onClick={() => fetchFileContent(file.path, file.sha!)}
+                    className="flex items-center gap-2 py-2 px-2 hover:bg-gray-50 text-sm transition-colors min-w-0"
                   >
-                    {/* ✅ Checkbox for flat file list too */}
+                    <File className="w-4 h-4 text-gray-500" />
+                    <span className="flex-1 truncate">{file.name}</span>
                     <Checkbox
                       checked={getFileChecked(file.path)}
                       disabled={hasSelectedAncestor(file.path)}
@@ -362,13 +345,6 @@ export function FileTab({
                       }
                       onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     />
-                    <File className="w-4 h-4 text-gray-500" />
-                    <span className="flex-1 truncate">{file.name}</span>
-                    {file.size && (
-                      <span className="text-xs text-gray-400 ml-2">
-                        {formatBytes(file.size)}
-                      </span>
-                    )}
                   </div>
                 ))
             )}
