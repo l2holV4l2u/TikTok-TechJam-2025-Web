@@ -16,9 +16,11 @@ import {
   ChevronDown,
   PanelLeft,
   Network,
+  Wand2,
 } from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "@/components/graph";
+import { GraphComparison } from "@/components/graph-comparison";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalysisResult, DependencyGraphProps } from "@/app/types/graphTypes";
 import {
@@ -52,6 +54,9 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const [currentAnalysisType, setCurrentAnalysisType] = useState<
     "repo" | "file" | null
   >(null);
+  const [loadingImprovement, setLoadingImprovement] = useState(false);
+  const [improvementResult, setImprovementResult] = useState<any>(null);
+  const [showComparison, setShowComparison] = useState(false);
 
   const repoFullName = `${owner}/${name}`;
 
@@ -187,6 +192,63 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     }
   };
 
+  // Improve dependency graph using ChatGPT 4o.mini
+  const improveGraph = async () => {
+    if (!graph) {
+      toast.error("No graph to improve", {
+        description: "Please analyze the repository first",
+      });
+      return;
+    }
+
+    try {
+      setLoadingImprovement(true);
+      setShowComparison(false);
+
+      const response = await fetch("/api/analyze/improve-graph", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nodes: graph.nodes,
+          edges: graph.edges,
+          context: {
+            owner,
+            repo: name,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Graph improvement failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      setImprovementResult(result);
+      setShowComparison(true);
+
+      if (result.status === "ok") {
+        toast.success("Graph Analysis Complete", {
+          description: "Your dependency graph is already well-structured!",
+        });
+      } else {
+        toast.success("Graph Improvements Found", {
+          description: "Check the comparison view for suggested improvements",
+        });
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to improve graph";
+      setError(errorMessage);
+      toast.error("Graph improvement failed", {
+        description: errorMessage,
+      });
+    } finally {
+      setLoadingImprovement(false);
+    }
+  };
+
   const fetchFileContent = async (path: string, sha: string) => {
     try {
       setLoadingFile(true);
@@ -319,6 +381,16 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             >
               <Network className="w-4 h-4 mr-2" />
               {loadingAnalysis ? "Analyzing..." : "Analyze Repository"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={improveGraph}
+              disabled={loadingImprovement || !graph}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
+            >
+              <Wand2 className="w-4 h-4 mr-2" />
+              {loadingImprovement ? "Improving..." : "Improve Graph with AI"}
             </Button>
             <Button variant="outline" size="sm" asChild>
               <a
@@ -467,11 +539,43 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
         <div className="flex-1 bg-gray-50 min-w-0 flex flex-col">
           {/* Graph Content */}
           <div className="flex-1 min-h-0">
-            {loadingAnalysis ? (
+            {showComparison && improvementResult ? (
+              <div className="h-full flex flex-col">
+                <div className="p-4 bg-white border-b border-gray-200">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowComparison(false)}
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Original Graph
+                  </Button>
+                </div>
+                <div className="flex-1 p-4 overflow-auto">
+                  <GraphComparison
+                    status={improvementResult.status}
+                    message={improvementResult.message}
+                    originalGraph={improvementResult.originalGraph}
+                    improvedGraph={improvementResult.improvedGraph}
+                    suggestions={improvementResult.suggestions}
+                  />
+                </div>
+              </div>
+            ) : loadingAnalysis ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <Network className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
                   <p className="text-gray-600">Analyzing dependencies...</p>
+                </div>
+              </div>
+            ) : loadingImprovement ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Wand2 className="w-12 h-12 text-purple-400 mx-auto mb-4 animate-pulse" />
+                  <p className="text-gray-600">AI is analyzing your graph...</p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    This may take a few moments
+                  </p>
                 </div>
               </div>
             ) : graph ? (
