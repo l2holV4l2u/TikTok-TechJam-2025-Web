@@ -34,6 +34,7 @@ import {
   ChevronRight,
   Filter,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -180,14 +181,23 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               </div>
             </div>
 
-            <Button
-              variant="outline"
-              onClick={() => signOut()}
-              className="gap-2"
-            >
-              <LogOut size={18} />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" asChild>
+                <Link href="/docs" className="gap-2">
+                  <FileText size={16} />
+                  Documentation
+                </Link>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => signOut()}
+                className="gap-2"
+              >
+                <LogOut size={18} />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -349,9 +359,13 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                         )}
                         <button
                           onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            window.open(`https://github.com/${repo.full_name}`, '_blank', 'noopener,noreferrer')
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(
+                              `https://github.com/${repo.full_name}`,
+                              "_blank",
+                              "noopener,noreferrer"
+                            );
                           }}
                           className="text-gray-400 hover:text-gray-600 transition-colors"
                         >
