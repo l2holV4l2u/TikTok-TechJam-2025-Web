@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileNode } from "@/lib/tree";
@@ -13,7 +12,6 @@ import {
   File,
   ArrowLeft,
   Eye,
-  AlertCircle,
   ChevronRight,
   ChevronDown,
   PanelLeft,
@@ -23,7 +21,6 @@ import Link from "next/link";
 import { DependencyGraph } from "@/components/graph";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalysisResult, DependencyGraphProps } from "@/app/types/graphTypes";
-import { analyzeGraph } from "@/app/api/chat/route";
 import {
   FileContentResponse,
   FileTreeResponse,
