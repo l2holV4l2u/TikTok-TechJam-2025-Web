@@ -79,39 +79,62 @@ ${nodes.map(node => `- ${node.id} (${node.kind}) defined in ${node.definedIn.fil
 
 Edges (${edges.length} total):
 ${edges.map(edge => `- ${edge.source} → ${edge.target} (${edge.kind})`).join('\n')}
+You are given a dependency graph of a software project.
 
-Analyze this dependency graph for:
-1. Circular dependencies
-2. Unnecessary coupling
-3. Missing abstraction layers
-4. Violations of dependency inversion principle
-5. Potential for better modularization
+Return results STRICTLY as JSON (no extra text) with this structure:
 
-Respond with a JSON object in this exact format:
 {
   "status": "ok" | "improved",
   "message": "Brief explanation of the analysis",
-  "issues": ["list", "of", "identified", "issues"],
-  "suggestions": ["list", "of", "improvement", "suggestions"],
+  "issues": ["list of identified issues such as circular dependencies, unnecessary coupling, missing abstraction layers, DIP violations, poor modularization"],
+  "suggestions": ["list of improvement suggestions based on the issues found"],
   "improvedNodes": [
     {
       "id": "node_id",
-      "kind": "class",
-      "definedIn": {"file": "path", "line": 1},
-      "usedIn": []
+      "kind": "class" | "interface" | "module" | "function",
+      "definedIn": {"file": "path/to/file", "line": number},
+      "usedIn": ["list of places this node is used, if applicable"]
     }
   ],
   "improvedEdges": [
     {
-      "source": "source_id",
-      "target": "target_id", 
-      "type": "dependsOn"
+      "source": "source_node_id",
+      "target": "target_node_id",
+      "type": "dependsOn" | "imports" | "implements" | "extends"
     }
-  ]
+  ],
+  "validation": {
+    "originalNodeIdsEcho": ["exact list of ALL node IDs from the input graph"],
+    "edgeNodeCheck": {
+      "unknownSources": ["any source ids in improvedEdges not found in originalNodeIdsEcho"],
+      "unknownTargets": ["any target ids in improvedEdges not found in originalNodeIdsEcho"]
+    },
+    "duplicateIds": ["any duplicated node ids you detect"],
+    "danglingEdges": ["stringified edges that reference missing nodes, must be []"],
+    "notes": "Any constraints you applied or corrections you made"
+  }
 }
 
-If status is "ok", the graph is already well-structured. Only include improvedNodes and improvedEdges if status is "improved".
-Keep node IDs consistent with the original graph. Only modify connections/relationships.
+Analysis tasks:
+1) Detect circular dependencies (cycles).
+2) Identify unnecessary coupling (mutual or dense pairwise dependencies without clear need).
+3) Find missing abstraction layers (e.g., high-level modules directly depending on low-level details).
+4) Detect Dependency Inversion Principle violations (high-level depending on low-level implementations rather than abstractions).
+5) Suggest better modularization (split/merge/restructure).
+
+HARD RULES (must follow):
+- DO NOT invent or rename nodes. Keep node IDs EXACTLY as in the input graph.
+- You may NOT create new nodes. If you want to propose new abstractions, describe them in "suggestions" only.
+- "improvedEdges" must ONLY reference node IDs present in "originalNodeIdsEcho". If an edge would reference a non-existent node, omit it and explain in "validation.notes".
+- If no changes are needed, set "status":"ok" and leave "improvedNodes" and "improvedEdges" as empty arrays.
+- If improvements are possible, set "status":"improved" and include ONLY modified connections in "improvedEdges". Do not include unchanged edges.
+- The response MUST be valid JSON. No commentary outside the JSON object.
+
+Quality checks before you output:
+- Ensure "validation.edgeNodeCheck.unknownSources" and "unknownTargets" are both [].
+- Ensure "validation.danglingEdges" is [].
+- Ensure every id in "improvedNodes" also appears in "originalNodeIdsEcho" (we are not adding nodes, only highlighting improved ones).
+- Keep the JSON under 50KB.
 `;
 
     const completion = await openai.chat.completions.create({
@@ -163,7 +186,8 @@ Keep node IDs consistent with the original graph. Only modify connections/relati
         })),
       };
     }
-
+    console.log("improve-graph result:", result.improvedGraph?.edges);
+    console.log(result.improvedGraph?.nodes)
     return Response.json(result);
   } catch (err: any) {
     console.error("improve-graph error:", err);
