@@ -15,6 +15,7 @@
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@xyflow/react": "^12.8.4",
     "class-variance-authority": "^0.7.1",

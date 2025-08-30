@@ -182,7 +182,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
 
   return (
     <div
-      className={`w-full h-screen bg-gradient-to-br from-slate-50 to-blue-50 ${className}`}
+      className={`w-full h-full bg-gradient-to-br from-slate-50 to-blue-50 ${className}`}
     >
       <ReactFlow
         nodes={styledNodes}

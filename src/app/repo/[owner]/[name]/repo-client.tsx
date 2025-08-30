@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Session } from "next-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,13 +16,13 @@ import {
   AlertCircle,
   ChevronRight,
   ChevronDown,
-  ChevronLeft,
+  PanelLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "../../../components/graph";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface RepoClientProps {
-  session: Session;
   owner: string;
   name: string;
 }
@@ -47,7 +46,7 @@ interface FileContentResponse {
   downloadUrl: string;
 }
 
-export default function RepoClient({ session, owner, name }: RepoClientProps) {
+export default function RepoClient({ owner, name }: RepoClientProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [loading, setLoading] = useState(true); // loading tree
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +76,26 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
       }
 
       const data: FileTreeResponse = await response.json();
-      setFileTree(data.tree);
+
+      // Recursive filter function for Kotlin files
+      const filterKotlinFiles = (nodes: FileNode[]): FileNode[] => {
+        return nodes
+          .map((node) => {
+            if (node.type === "folder" && node.children) {
+              const filteredChildren = filterKotlinFiles(node.children);
+              if (filteredChildren.length > 0) {
+                return { ...node, children: filteredChildren };
+              }
+              return null; // exclude empty folders
+            } else if (node.type === "file" && node.name.endsWith(".kt")) {
+              return node; // include Kotlin file
+            }
+            return null; // exclude non-Kotlin files
+          })
+          .filter(Boolean) as FileNode[];
+      };
+
+      setFileTree(filterKotlinFiles(data.tree));
       setError(null);
     } catch (err) {
       setError(
@@ -183,34 +201,33 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </Link>
-            </Button>
+      <header className="bg-white border-b border-gray-200 p-4 w-full">
+        <div className="flex items-center gap-4 justify-between">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Link>
+          </Button>
 
-            <div className="flex items-center gap-2">
-              <Github className="w-6 h-6 text-gray-800" />
-              <h1 className="text-xl font-semibold text-gray-900">
-                {repoFullName}
-              </h1>
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href={`https://github.com/${repoFullName}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  View on GitHub
-                </a>
-              </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex gap-1 items-center">
+              <Github size={18} className="text-gray-800" />
+              <h1 className="font-medium text-gray-900">{repoFullName}</h1>
             </div>
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href={`https://github.com/${repoFullName}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gap-1"
+              >
+                <Eye className="w-4 h-4" />
+                View on GitHub
+              </a>
+            </Button>
           </div>
         </div>
       </header>
@@ -221,7 +238,7 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
           <Card className="border-red-200 bg-red-50">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-red-800">
-                <AlertCircle className="w-5 h-5" />
+                <AlertCircle size={18} />
                 <span>{error}</span>
               </div>
               <Button
@@ -237,10 +254,10 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 overflow-hidden">
         {/* File Tree Sidebar */}
         <div
-          className={`relative transition-all duration-300 ease-in-out ${
+          className={`relative transition-all duration-300 ease-in-out flex-shrink-0 ${
             isFileTreeCollapsed ? "w-0" : "w-80"
           }`}
         >
@@ -251,109 +268,133 @@ export default function RepoClient({ session, owner, name }: RepoClientProps) {
                 : "opacity-100"
             }`}
           >
-            {/* Sidebar Content */}
-            <div className="flex-1 flex flex-col">
-              {/* Sidebar Header */}
-              <div className="flex items-center p-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Folder className="w-5 h-5 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">Files</h3>
-                </div>
-              </div>
-
+            <Tabs defaultValue="tree" className="flex-1 flex flex-col min-h-0">
               {/* Sidebar Content */}
-              <ScrollArea className="flex-1">
-                <div className="p-2">
-                  {loading ? (
-                    Array.from({ length: 10 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-2 py-2 px-3"
-                      >
-                        <Skeleton className="w-4 h-4" />
-                        <Skeleton className="h-4 flex-1" />
-                      </div>
-                    ))
-                  ) : fileTree.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      No files found in this repository
-                    </div>
-                  ) : (
-                    renderFileTree(fileTree)
-                  )}
+              <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <div className="flex items-center p-4 border-b border-gray-100 justify-between flex-shrink-0">
+                  <TabsList className="border-b border-gray-100 flex-shrink-0">
+                    <TabsTrigger value="tree" className="flex-1 text-sm">
+                      Folder Tree
+                    </TabsTrigger>
+                    <TabsTrigger value="flat" className="flex-1 text-sm">
+                      Kotlin Files
+                    </TabsTrigger>
+                  </TabsList>
+                  <button
+                    onClick={toggleFileTree}
+                    className="p-1 hover:bg-gray-200 rounded flex-shrink-0"
+                  >
+                    <PanelLeft size={18} />
+                  </button>
                 </div>
-              </ScrollArea>
-            </div>
 
-            {/* Full Height Toggle Bar - Visible */}
-            <div
-              className="w-4 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors flex items-center justify-center group border-l border-gray-200"
-              onClick={toggleFileTree}
-            >
-              {/* <div className="w-1 h-8 bg-gray-400 group-hover:bg-gray-600 transition-colors rounded-full flex items-center justify-center"> */}
-              <ChevronLeft className="w-16 h-16" />
-              {/* </div> */}
-            </div>
+                <TabsContent value="tree" className="flex-1 min-h-0">
+                  <ScrollArea className="h-full">
+                    <div className="p-2">
+                      {loading ? (
+                        Array.from({ length: 10 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 py-2 px-3"
+                          >
+                            <Skeleton className="w-4 h-4" />
+                            <Skeleton className="h-4 flex-1" />
+                          </div>
+                        ))
+                      ) : fileTree.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          No files found in this repository
+                        </div>
+                      ) : (
+                        renderFileTree(fileTree)
+                      )}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="flat" className="flex-1 min-h-0">
+                  <ScrollArea className="h-full">
+                    <div className="p-2 overflow-hidden">
+                      {loading ? (
+                        Array.from({ length: 10 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 py-2 px-3 min-w-0"
+                          >
+                            <Skeleton className="w-4 h-4 flex-shrink-0" />
+                            <Skeleton className="h-4 flex-1 min-w-0" />
+                          </div>
+                        ))
+                      ) : fileTree.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          No Kotlin files found
+                        </div>
+                      ) : (
+                        fileTree
+                          .flatMap((node) => {
+                            const flattenFiles = (
+                              n: FileNode[]
+                            ): FileNode[] => {
+                              return n.flatMap((child) => {
+                                if (child.type === "folder" && child.children)
+                                  return flattenFiles(child.children);
+                                if (child.type === "file") return [child];
+                                return [];
+                              });
+                            };
+                            return flattenFiles([node]);
+                          })
+                          .map((file) => (
+                            <div
+                              key={file.path}
+                              className={`flex items-center gap-2 py-2 px-3 hover:bg-gray-50 cursor-pointer text-sm transition-colors min-w-0 ${
+                                selectedFile === file.path
+                                  ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
+                                  : "text-gray-700"
+                              }`}
+                              onClick={() =>
+                                fetchFileContent(file.path, file.sha!)
+                              }
+                            >
+                              <File className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                              <span className="flex-1 min-w-0 truncate">
+                                {file.name}
+                              </span>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
         </div>
 
         {/* Full Height Toggle Bar - Hidden */}
         {isFileTreeCollapsed && (
           <div
-            className="w-4 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors flex items-center justify-center group border-r border-gray-200"
+            className="w-6 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors flex items-center justify-center group border-r border-gray-200"
             onClick={toggleFileTree}
           >
-            {/* <div className="w-1 h-8 bg-gray-400 group-hover:bg-gray-600 transition-colors rounded-full flex items-center justify-center"> */}
             <ChevronRight className="w-16 h-16" />
-            {/* </div> */}
           </div>
         )}
 
         {/* Main Content Area */}
-        <div className="flex-1 bg-gray-50">
+        <div className="flex-1 bg-gray-50 min-w-0">
           <DependencyGraph
             nodes={[
               { id: "A", label: "Core Module" },
               { id: "B", label: "Auth Service" },
               { id: "C", label: "User API" },
               { id: "D", label: "Frontend" },
-              { id: "E", label: "Database" },
-              { id: "F", label: "Cache" },
-              { id: "G", label: "Logging Service" },
-              { id: "H", label: "Analytics Service" },
-              { id: "I", label: "Notification Service" },
-              { id: "J", label: "Payment Gateway" },
-              { id: "K", label: "Email Service" },
-              { id: "L", label: "Search Service" },
-              { id: "M", label: "Recommendation Engine" },
-              { id: "N", label: "Monitoring Service" },
-              { id: "O", label: "Admin Dashboard" },
-              { id: "P", label: "External API Integration" },
             ]}
             edges={[
               { source: "A", target: "B" },
               { source: "A", target: "C" },
               { source: "B", target: "D" },
               { source: "C", target: "D" },
-              { source: "C", target: "E" },
-              { source: "C", target: "F" },
-              { source: "B", target: "E" },
-              { source: "A", target: "G" },
-              { source: "D", target: "H" },
-              { source: "C", target: "I" },
-              { source: "D", target: "I" },
-              { source: "J", target: "C" },
-              { source: "D", target: "J" },
-              { source: "K", target: "I" },
-              { source: "L", target: "C" },
-              { source: "M", target: "L" },
-              { source: "M", target: "D" },
-              { source: "N", target: "A" },
-              { source: "N", target: "E" },
-              { source: "O", target: "B" },
-              { source: "O", target: "E" },
-              { source: "P", target: "C" },
-              { source: "P", target: "J" },
             ]}
           />
         </div>

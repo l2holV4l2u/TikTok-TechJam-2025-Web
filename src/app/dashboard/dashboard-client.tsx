@@ -169,9 +169,9 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Github className="w-8 h-8 text-gray-800" />
+              <Github size={32} className="text-gray-800" />
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
+                <h1 className="text-lg font-semibold text-gray-900">
                   GitHub Repository Explorer
                 </h1>
                 <p className="text-sm text-gray-600">
@@ -185,7 +185,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
               onClick={() => signOut()}
               className="gap-2"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut size={18} />
               Sign Out
             </Button>
           </div>
@@ -332,33 +332,32 @@ export default function DashboardClient({ session }: DashboardClientProps) {
             </Card>
           ) : (
             filteredRepos.map((repo) => (
-              <Card key={repo.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/repo/${repo.owner.login}/${repo.name}`}
-                        className="text-lg font-semibold text-blue-600 hover:text-blue-800 hover:underline"
-                      >
+              <Link
+                href={`/repo/${repo.owner.login}/${repo.name}`}
+                className="h-full"
+                key={repo.id}
+              >
+                <Card className="h-full flex flex-col hover:shadow-md transition-shadow cursor-pointer">
+                  <CardHeader className="flex-1 flex flex-col">
+                    <CardTitle>
+                      <div className="flex items-center gap-2">
                         {repo.full_name}
-                      </Link>
-                      {repo.private ? (
-                        <Lock className="w-4 h-4 text-gray-500" />
-                      ) : (
-                        <Globe className="w-4 h-4 text-gray-500" />
-                      )}
-                      <a
-                        href={`https://github.com/${repo.full_name}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  </CardTitle>
-                  <CardDescription className="pt-1">
-                    <div className="flex items-start justify-between">
+                        {repo.private ? (
+                          <Lock className="w-4 h-4 text-gray-500" />
+                        ) : (
+                          <Globe className="w-4 h-4 text-gray-500" />
+                        )}
+                        <a
+                          href={`https://github.com/${repo.full_name}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </CardTitle>
+                    <CardDescription className="pt-1 flex-1 flex flex-col justify-between">
                       <div className="flex-1">
                         {repo.description && (
                           <p className="text-gray-700 mb-3 line-clamp-2">
@@ -390,10 +389,10 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                           </span>
                         </div>
                       </div>
-                    </div>
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
             ))
           )}
         </div>
