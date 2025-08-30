@@ -29,6 +29,7 @@ import {
   showHeavyNodesAtom,
   showLongestPathAtom,
 } from "@/lib/graphAtom";
+import { GraphLegend } from "./graphLegend";
 
 function createNodeFromData(node: GraphNode, index: number) {
   const colors = [
@@ -86,7 +87,7 @@ export const DependencyGraph = () => {
     const e = inputEdges.map(createEdgeFromData);
     return getLayoutedElements(n, e);
   }, [inputNodes, inputEdges]);
-  const showCycles = useAtom(showCyclesAtom);
+  const showCycles = useAtomValue(showCyclesAtom);
   const analysis = useAtomValue(analysisAtom);
   const showHeavyNodes = useAtomValue(showHeavyNodesAtom);
   const showLongestPath = useAtomValue(showLongestPathAtom);
@@ -287,6 +288,12 @@ export const DependencyGraph = () => {
           style={{ opacity: 0.5 }}
         />
         <Controls className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg" />
+        <GraphLegend
+          showCycles={showCycles}
+          showHeavyNodes={showHeavyNodes}
+          showCriticalNodes={showCriticalNodes}
+          showLongestPath={showLongestPath}
+        />
         <MiniMap
           className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg"
           nodeColor={(node) => {
