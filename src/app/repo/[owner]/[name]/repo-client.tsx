@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type React from "react";
+import type { CheckedState } from "@radix-ui/react-checkbox";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FileNode } from "@/lib/tree";
 import { formatBytes } from "@/lib/github";
 import {
@@ -57,6 +60,9 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const [loadingImprovement, setLoadingImprovement] = useState(false);
   const [improvementResult, setImprovementResult] = useState<any>(null);
   const [showComparison, setShowComparison] = useState(false);
+
+  // Selection state for files and folders
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
 
   const repoFullName = `${owner}/${name}`;
 
@@ -345,54 +351,173 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     setIsFileTreeCollapsed(!isFileTreeCollapsed);
   };
 
-  const renderFileTree = (nodes: FileNode[], depth = 0) => {
-    return nodes.map((node) => (
-      <div key={node.path}>
-        <div
-          className={`flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors ${
-            selectedFile === node.path
-              ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
-              : "text-gray-700"
-          }`}
-          style={{ paddingLeft: `${depth * 12 + 8}px` }}
-          onClick={() => {
-            if (node.type === "folder") {
-              toggleFolder(node.path);
-            } else {
-              fetchFileContent(node.path, node.sha!);
-            }
-          }}
-        >
-          {node.type === "folder" ? (
-            <>
-              {expandedFolders.has(node.path) ? (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-gray-500" />
-              )}
-              <Folder className="w-4 h-4 text-blue-600" />
-            </>
-          ) : (
-            <>
-              <div className="w-4" />
-              <File className="w-4 h-4 text-gray-500" />
-            </>
-          )}
-          <span className="flex-1 truncate">{node.name}</span>
-          {node.type === "file" && node.size && (
-            <span className="text-xs text-gray-400 ml-2">
-              {formatBytes(node.size)}
-            </span>
-          )}
-        </div>
+  // Selection helper functions
+  const hasSelectedAncestor = (path: string) => {
+    const parts = path.split("/");
+    for (let i = parts.length - 1; i >= 1; i--) {
+      const parent = parts.slice(0, i).join("/");
+      if (selectedPaths.has(parent)) return true;
+    }
+    return false;
+  };
 
-        {node.type === "folder" &&
-          node.children &&
-          expandedFolders.has(node.path) && (
+  const getFolderSelectionState = (node: FileNode): boolean | "indeterminate" => {
+    const selfSelected = selectedPaths.has(node.path);
+    if (selfSelected) return true;
+
+    const anySelected = (n: FileNode): boolean => {
+      if (n.type === "file") {
+        return selectedPaths.has(n.path) || hasSelectedAncestor(n.path);
+      }
+      return (n.children ?? []).some(anySelected) || selectedPaths.has(n.path);
+    };
+
+    const hasAny = (node.children ?? []).some(anySelected);
+    return hasAny ? "indeterminate" : false;
+  };
+
+  const onFolderCheckbox = (node: FileNode, checked: CheckedState) => {
+    const next = new Set(selectedPaths);
+    if (checked === true) next.add(node.path);
+    else next.delete(node.path);
+    setSelectedPaths(next);
+  };
+
+  const getFileChecked = (path: string) =>
+    selectedPaths.has(path) || hasSelectedAncestor(path);
+
+  const onFileCheckbox = (node: FileNode, checked: CheckedState) => {
+    const next = new Set(selectedPaths);
+    if (checked === true) next.add(node.path);
+    else next.delete(node.path);
+    setSelectedPaths(next);
+  };
+
+  // Analyze only selected paths
+  const analyzeSelected = async () => {
+    if (selectedPaths.size === 0) {
+      toast.error("No selection", {
+        description: "Please select files or folders first",
+      });
+      return;
+    }
+
+    try {
+      setLoadingAnalysis(true);
+
+      const response = await fetch("/api/analyze/github", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          owner,
+          repo: name,
+          includePaths: Array.from(selectedPaths),
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(
+          `Selection analysis failed: ${response.statusText} ${errText}`
+        );
+      }
+
+      const analysis = await response.json();
+      setAnalysisResult(analysis);
+
+      if (analysis.nodes && analysis.edges) {
+        setGraph({
+          nodes: analysis.nodes,
+          edges: analysis.edges,
+        });
+      }
+
+      toast.success("Analyzed selection", {
+        description: `Included ${analysis.nodes?.length ?? 0} nodes, ${
+          analysis.edges?.length ?? 0
+        } edges`,
+      });
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to analyze selection";
+      setError(msg);
+      toast.error("Selection analysis failed", { description: msg });
+    } finally {
+      setLoadingAnalysis(false);
+    }
+  };
+
+  const renderFileTree = (nodes: FileNode[], depth = 0) => {
+    return nodes.map((node) => {
+      const isFolder = node.type === "folder";
+      const isExpanded = expandedFolders.has(node.path);
+
+      return (
+        <div key={node.path}>
+          <div
+            className={`flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors ${
+              selectedFile === node.path
+                ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
+                : "text-gray-700"
+            }`}
+            style={{ paddingLeft: `${depth * 12 + 8}px` }}
+            onClick={() => {
+              if (isFolder) {
+                toggleFolder(node.path);
+              } else {
+                fetchFileContent(node.path, node.sha!);
+              }
+            }}
+          >
+            {/* Checkbox */}
+            {isFolder ? (
+              <Checkbox
+                checked={getFolderSelectionState(node)}
+                onCheckedChange={(v: CheckedState) => onFolderCheckbox(node, v)}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              />
+            ) : (
+              <Checkbox
+                checked={getFileChecked(node.path)}
+                disabled={hasSelectedAncestor(node.path)}
+                onCheckedChange={(v: CheckedState) => onFileCheckbox(node, v)}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              />
+            )}
+
+            {/* Icon + name */}
+            {isFolder ? (
+              <>
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-gray-500" />
+                )}
+                <Folder className="w-4 h-4 text-blue-600" />
+              </>
+            ) : (
+              <>
+                <div className="w-4" />
+                <File className="w-4 h-4 text-gray-500" />
+              </>
+            )}
+            <span className="flex-1 truncate">{node.name}</span>
+
+            {node.type === "file" && node.size && (
+              <span className="text-xs text-gray-400 ml-2">
+                {formatBytes(node.size)}
+              </span>
+            )}
+          </div>
+
+          {isFolder && node.children && isExpanded && (
             <div>{renderFileTree(node.children, depth + 1)}</div>
           )}
-      </div>
-    ));
+        </div>
+      );
+    });
   };
 
   return (
@@ -413,7 +538,17 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-2">
+            {/* Analyze selected button */}
+            <Button
+              size="sm"
+              onClick={analyzeSelected}
+              disabled={loadingAnalysis || selectedPaths.size === 0}
+            >
+              <Network className="w-4 h-4 mr-2" />
+              {loadingAnalysis ? "Analyzing..." : `Analyze Selected (${selectedPaths.size})`}
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -562,6 +697,12 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                                 fetchFileContent(file.path, file.sha!)
                               }
                             >
+                              <Checkbox
+                                checked={getFileChecked(file.path)}
+                                disabled={hasSelectedAncestor(file.path)}
+                                onCheckedChange={(v: CheckedState) => onFileCheckbox(file, v)}
+                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                              />
                               <File className="w-4 h-4 text-gray-500" />
                               <span className="flex-1 truncate">
                                 {file.name}
@@ -633,8 +774,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                   </p>
                   <p className="text-sm text-gray-500 mb-4">
                     Click "Analyze Repository" to see the full dependency graph,
-                    or select a file and click "Analyze Current File" for
-                    single-file analysis.
+                    or select files/folders and click "Analyze Selected" for
+                    targeted analysis.
                   </p>
                   <Button
                     variant="outline"
