@@ -347,14 +347,14 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                         ) : (
                           <Globe className="w-4 h-4 text-gray-500" />
                         )}
-                        <a
+                        <Link
                           href={`https://github.com/${repo.full_name}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-gray-400 hover:text-gray-600"
                         >
                           <ExternalLink className="w-4 h-4" />
-                        </a>
+                        </Link>
                       </div>
                     </CardTitle>
                     <CardDescription className="pt-1 flex-1 flex flex-col justify-between">
