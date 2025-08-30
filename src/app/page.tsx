@@ -77,7 +77,7 @@ export default function Home() {
             <FireIcon className="w-8 h-8 text-purple-600" />
             <Sparkles className="w-4 h-4 text-pink-500 absolute -top-1 -right-1 animate-ping" />
           </div>
-          <span className="text-gray-900 text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Tokbokki
           </span>
         </div>
@@ -190,21 +190,21 @@ export default function Home() {
                 icon: <DocumentTextIcon className="w-8 h-8 text-emerald-600" />,
                 title: "Detailed Analysis",
                 description:
-                  "Comprehensive dependency reports with version conflicts and update recommendations",
+                  "Comprehensive dependency reports and update recommendations",
                 gradient: "from-emerald-500 to-emerald-600",
               },
               {
-                icon: <Github className="w-8 h-8 text-blue-600" />,
+                icon: <Package className="w-8 h-8 text-blue-600" />,
                 title: "Multi-Project Support",
                 description:
                   "Analyze multiple Kotlin projects and compare dependency patterns across repositories",
                 gradient: "from-blue-500 to-blue-600",
               },
               {
-                icon: <ArrowRightIcon className="w-8 h-8 text-violet-600" />,
-                title: "Export & Share",
+                icon: <ChartBarIcon className="w-8 h-8 text-violet-600" />,
+                title: "Graph Comparison",
                 description:
-                  "Export visualizations and reports to share with your team or stakeholders",
+                  "Compare original dependency graphs with AI-improved versions for better analysis",
                 gradient: "from-violet-500 to-violet-600",
               },
             ].map((feature, index) => (
