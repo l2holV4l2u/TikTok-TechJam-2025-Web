@@ -1,9 +1,6 @@
-packageManager: pnpm@10.14.0
-
-pnpm:
-  onlyBuiltDependencies:
-    - "@tailwindcss/oxide"
-    - sharp
-    - tree-sitter
-    - tree-sitter-kotlin
-    - unrs-resolver
+onlyBuiltDependencies:
+  - "@tailwindcss/oxide"
+  - sharp
+  - tree-sitter
+  - tree-sitter-kotlin
+  - unrs-resolver
