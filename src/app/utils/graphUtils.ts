@@ -87,3 +87,8 @@ export function createEdgeFromData(edge: GraphEdge) {
     },
   };
 }
+
+export function getNodeLabel(nodeId: string): string {
+  const parts = nodeId.split(".");
+  return parts[parts.length - 1].toUpperCase();
+}

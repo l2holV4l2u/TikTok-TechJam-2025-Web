@@ -1,11 +1,11 @@
 export type GraphNode = {
   id: string;
   kind: string;
-  definedIn: {
+  definedIn?: {
     file: string;
     line: number;
   };
-  usedIn: string[];
+  usedIn?: string[];
 };
 
 export type GraphEdge = {
@@ -30,4 +30,26 @@ export type AnalysisResult = {
   nodes: GraphNode[];
   edges: GraphEdge[];
   fileToDefinedNodes: Record<string, string[]>;
+};
+
+export type CycleInfo = {
+  cycles: string[][];
+  cycleNodes: Set<string>;
+  cycleEdges: Set<string>;
+};
+
+export type GraphAnalysis = {
+  cycles: CycleInfo;
+  heaviestNodes: {
+    id: string;
+    totalDependencies: number;
+    incoming: number;
+    outgoing: number;
+  }[];
+  longestPaths: { path: string[]; length: number }[];
+  criticalNodes: string[]; // Nodes that appear in many paths
+  isolatedNodes: string[]; // Nodes with no dependencies
+  leafNodes: string[]; // Nodes with no outgoing edges
+  rootNodes: string[]; // Nodes with no incoming edges
+  maxDepth: number;
 };

@@ -177,6 +177,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
         });
       }
 
+      console.log(analysis);
+
       return analysis;
     } catch (err) {
       setError(
