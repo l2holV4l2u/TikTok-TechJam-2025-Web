@@ -66,8 +66,8 @@ Artifacts/Data flow:
 
 ## APIs Used
 
-- **GitHub REST API (stub-ready):** List repositories, fetch file trees/contents.
-- **OpenAI API (stub-ready):** Summarize issues, propose refactors.
+- **GitHub REST API:** List repositories, fetch file trees/contents.
+- **OpenAI API:** Summarize issues, propose refactors.
 
 ---
 
@@ -104,27 +104,26 @@ Artifacts/Data flow:
 ## JSON Graph Schema (Input)
 
 ```ts
-// lib/types.ts
-export type TokNode = {
-  id: string; // class or object name
-  kind?: "class" | "interface" | "object" | "module";
-  file?: string; // relative source path
-  annotations?: string[]; // e.g. ["@Provides", "@Inject"]
-  provides?: string[]; // tokens provided (for DI)
-  injectedProps?: string[]; // injected properties or constructor params
+// types/
+export type GraphNode = {
+  id: string;
+  kind: string;
+  definedIn?: {
+    file: string;
+    line: number;
+  };
+  usedIn?: string[];
 };
 
-export type TokEdge = {
-  id: string; // `${source}->${target}`
-  source: string; // class A
-  target: string; // depends on class B
-  type?: "injects" | "provides" | "uses";
-  label?: string; // optional edge label
+export type GraphEdge = {
+  source: string;
+  target: string;
+  type: string; // e.g. "dependsOn", "calls", etc.
 };
 
-export type TokGraph = {
-  nodes: TokNode[];
-  edges: TokEdge[];
+export type DependencyGraphProps = {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
 };
 ```
 
@@ -234,3 +233,29 @@ export type TokGraph = {
   ]
 }
 ```
+---
+## Future Plan
+
+**Advanced AI Features:**
+- **Refactoring Suggestions:** AI-powered recommendations for dependency restructuring
+- **Architecture Patterns Detection:** Identify and suggest MVVM, Clean Architecture patterns
+- **Performance Impact Analysis:** Predict performance implications of dependency changes
+- **Auto-Documentation:** Generate dependency documentation and architecture diagrams
+
+**Collaboration Features:**
+- **Team Sharing:** Share dependency analysis results with team members
+- **Change Impact Analysis:** Track how code changes affect dependency graphs over time
+- **Integration Hooks:** Webhook support for CI/CD pipeline integration
+
+**Platform Expansion:**
+- **IDE Plugins:** VS Code, IntelliJ IDEA extensions for real-time dependency insights
+- **CLI Tool:** Command-line interface for automated analysis in CI/CD pipelines
+- **API Platform:** Public API for third-party integrations and custom tooling
+- **Mobile App:** Mobile companion for quick dependency reviews
+
+**Advanced Analytics:**
+- **Dependency Trends:** Historical analysis of dependency evolution
+- **Technical Debt Metrics:** Quantify and track technical debt accumulation
+- **Architecture Visualization:** 3D dependency graphs and interactive architecture views
+- **ML-Powered Insights:** Machine learning for predicting dependency issues and optimization opportunities
+

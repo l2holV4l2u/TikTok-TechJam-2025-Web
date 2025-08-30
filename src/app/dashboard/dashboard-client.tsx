@@ -35,7 +35,9 @@ import {
   Filter,
   ChevronDown,
   FileText,
+  Sparkles,
 } from "lucide-react";
+import { FireIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 
 interface DashboardClientProps {
@@ -170,6 +172,16 @@ export default function DashboardClient({ session }: DashboardClientProps) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <div className="flex items-center space-x-2">
+                <div className="relative">
+                  <FireIcon className="w-8 h-8 text-purple-600" />
+                  <Sparkles className="w-4 h-4 text-pink-500 absolute -top-1 -right-1 animate-ping" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Tokbokki
+                </span>
+              </div>
+              <div className="w-px h-8 bg-gray-300"></div>
               <Github size={32} className="text-gray-800" />
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">
@@ -225,7 +237,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={searching}>
+                <Button className="text-black/70" type="submit" disabled={searching}>
                   {searching ? "Searching..." : "Search"}
                 </Button>
               </div>
