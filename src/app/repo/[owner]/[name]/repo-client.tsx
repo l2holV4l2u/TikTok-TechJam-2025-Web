@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
 import { FileNode } from "@/lib/tree";
-import { Github, ArrowLeft, Eye, Network, Wand2 } from "lucide-react";
+import { Github, ArrowLeft, Eye, Network, GitCompare } from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "@/components/graph";
 import { GraphComparison } from "@/components/graph-comparison";
@@ -21,10 +21,9 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [repoAnalysisCache, setRepoAnalysisCache] = useState<any>(null);
   const [graph, setGraph] = useState<DependencyGraphProps | null>(null);
-  const [loadingImprovement, setLoadingImprovement] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [improvementResult, setImprovementResult] = useState<any>(null);
   const [showComparison, setShowComparison] = useState(false);
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const repoFullName = `${owner}/${name}`;
   const setInputNodes = useSetAtom(inputNodesAtom);
   const setInputEdges = useSetAtom(inputEdgesAtom);
@@ -103,6 +102,12 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     } finally {
       setLoadingAnalysis(false);
     }
+  };
+
+  // Handle showing comparison from AI tab
+  const handleShowComparison = (result: any) => {
+    setImprovementResult(result);
+    setShowComparison(true);
   };
 
   // Navigation functions for graph views
@@ -214,62 +219,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     }
   };
 
-  // Improve dependency graph using ChatGPT 4o.mini
-  const improveGraph = async () => {
-    if (!graph) {
-      toast.error("No graph to improve", {
-        description: "Please analyze the repository first",
-      });
-      return;
-    }
-
-    try {
-      setLoadingImprovement(true);
-      setShowComparison(false);
-
-      const response = await fetch("/api/analyze/improve-graph", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nodes: graph.nodes,
-          edges: graph.edges,
-          context: {
-            owner,
-            repo: name,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Graph improvement failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      setImprovementResult(result);
-      setShowComparison(true);
-
-      if (result.status === "ok") {
-        toast.success("Graph Analysis Complete", {
-          description: "Your dependency graph is already well-structured!",
-        });
-      } else {
-        toast.success("Graph Improvements Found", {
-          description: "Check the comparison view for suggested improvements",
-        });
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to improve graph";
-      toast.error("Graph improvement failed", {
-        description: errorMessage,
-      });
-    } finally {
-      setLoadingImprovement(false);
-    }
-  };
-
   useEffect(() => {
     const initializeRepo = async () => {
       await fetchFileTree();
@@ -299,6 +248,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           </div>
 
           <div className="flex gap-2">
+           
             <Button
               variant="outline"
               size="sm"
@@ -316,38 +266,26 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             >
                   Analyze Selected ({selectedPaths.size})
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={improveGraph}
-              disabled={loadingImprovement || !graph}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
-            >
-              <Wand2 className="w-4 h-4 mr-2" />
-              {loadingImprovement ? "Improving..." : "Improve Graph with AI"}
-            </Button>
-            {improvementResult?.improvedGraph && !showComparison && (
+             {improvementResult && !showComparison && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowComparison(true)}
-                className="bg-blue-50 hover:bg-blue-100 text-blue-700"
               >
-                <Eye className="w-4 h-4 mr-2" />
+                <GitCompare className="w-4 h-4 mr-2" />
                 View Comparison
               </Button>
             )}
-            <Button variant="outline" size="sm" asChild>
-              <a
-                href={`https://github.com/${repoFullName}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="gap-1"
+            {improvementResult && showComparison && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowComparison(false)}
               >
-                <Eye className="w-4 h-4" />
-                View on GitHub
-              </a>
-            </Button>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Original
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -363,6 +301,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           setLoadingAnalysis={setLoadingAnalysis}
           selectedPaths={selectedPaths}
           setSelectedPaths={setSelectedPaths}
+          graph={graph}
+          onShowComparison={handleShowComparison}
         />
 
         {/* Main Content Area */}
@@ -388,16 +328,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                 <div className="text-center">
                   <Network className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
                   <p className="text-gray-600">Analyzing dependencies...</p>
-                </div>
-              </div>
-            ) : loadingImprovement ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Wand2 className="w-12 h-12 text-purple-400 mx-auto mb-4 animate-pulse" />
-                  <p className="text-gray-600">AI is analyzing your graph...</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    This may take a few moments
-                  </p>
                 </div>
               </div>
             ) : graph ? (

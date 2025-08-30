@@ -6,6 +6,7 @@ import { ChevronRight, PanelLeft } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { FileTab } from "./fileTab";
 import { AnalysisTab } from "./analysisTab";
+import { AITab } from "./aiTab";
 
 export function Sidebar({
   loading,
@@ -16,6 +17,8 @@ export function Sidebar({
   setLoadingAnalysis,
   selectedPaths,
   setSelectedPaths,
+  graph,
+  onShowComparison,
 }: {
   loading: boolean;
   fileTree: FileNode[];
@@ -23,6 +26,8 @@ export function Sidebar({
   setLoadingAnalysis: Dispatch<SetStateAction<boolean>>;
   selectedPaths: Set<string>;
   setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
+  graph: DependencyGraphProps | null;
+  onShowComparison?: (result: any) => void;
 } & RepoClientProps) {
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
   const toggleFileTree = () => {
@@ -81,6 +86,14 @@ export function Sidebar({
               </TabsContent>
               <TabsContent value="analysis" className="flex-1 min-h-0">
                 <AnalysisTab />
+              </TabsContent>
+              <TabsContent value="ai" className="flex-1 min-h-0">
+                <AITab 
+                  owner={owner}
+                  name={name}
+                  graph={graph}
+                  onShowComparison={onShowComparison}
+                />
               </TabsContent>
             </div>
           </Tabs>
