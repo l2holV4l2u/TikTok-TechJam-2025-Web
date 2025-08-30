@@ -15,8 +15,8 @@ import {
 } from "@xyflow/react";
 import React, { useState, useCallback, useMemo } from "react";
 import "@xyflow/react/dist/style.css";
-import { createEdgeFromData, getLayoutedElements } from "../utils/graphUtils";
-import { DependencyGraphProps, GraphNode } from "../types/graphTypes";
+import { createEdgeFromData, getLayoutedElements } from "../app/utils/graphUtils";
+import { DependencyGraphProps, GraphNode } from "../app/types/graphTypes";
 
 const createNodeFromData = (node: GraphNode, index: number): Node => {
   const colors = [

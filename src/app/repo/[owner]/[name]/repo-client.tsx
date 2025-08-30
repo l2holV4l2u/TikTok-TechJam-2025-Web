@@ -19,9 +19,10 @@ import {
   PanelLeft,
 } from "lucide-react";
 import Link from "next/link";
-import { DependencyGraph } from "../../../components/graph";
+import { DependencyGraph } from "@/components/graph";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { DependencyGraphProps } from "@/app/types/graphTypes";
+import { analyzeGraph } from "@/app/api/chat/route";
 interface RepoClientProps {
   owner: string;
   name: string;
@@ -60,6 +61,11 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   );
 
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
+  // graph
+  const [chatGraph, setChatGraph] = useState<DependencyGraphProps | null>(null);
+  const [graph, setGraph] = useState<DependencyGraphProps | null>(null);
+  const [loadingChatGraph, setLoadingChatGraph] = useState(false);
+  const [loadingGraph, setLoadingGraph] = useState(false);
 
   const repoFullName = `${owner}/${name}`;
   const fetchFileTree = async () => {
@@ -132,6 +138,18 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     }
   };
 
+  const fetchChatGraph = async () => {
+    try {
+      const response = await analyzeGraph(graph!);
+      // setChatGraph(response);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to analyze dependency graph"
+      );
+    }
+  };
   useEffect(() => {
     fetchFileTree();
   }, [owner, name]);
