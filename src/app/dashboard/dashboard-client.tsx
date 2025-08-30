@@ -347,14 +347,16 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                         ) : (
                           <Globe className="w-4 h-4 text-gray-500" />
                         )}
-                        <Link
-                          href={`https://github.com/${repo.full_name}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gray-400 hover:text-gray-600"
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            window.open(`https://github.com/${repo.full_name}`, '_blank', 'noopener,noreferrer')
+                          }}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
                         >
                           <ExternalLink className="w-4 h-4" />
-                        </Link>
+                        </button>
                       </div>
                     </CardTitle>
                     <CardDescription className="pt-1 flex-1 flex flex-col justify-between">
