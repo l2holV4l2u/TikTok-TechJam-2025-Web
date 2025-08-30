@@ -14,7 +14,7 @@ export const GraphLegend: React.FC<GraphLegendProps> = ({
   showCriticalNodes,
 }) => {
   return (
-    <div className="absolute bottom-4 right-4 z-20">
+    <div className="absolute top-4 left-4 z-20">
       <div className="bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg p-3">
         <div className="text-xs font-medium text-gray-800 mb-2">Legend</div>
         <div className="space-y-1 text-xs">

@@ -5,6 +5,7 @@ import { FileNode } from "@/lib/tree";
 import { ChevronRight, PanelLeft } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { FileTab } from "./fileTab";
+import { AnalysisTab } from "./analysisTab";
 
 export function Sidebar({
   loading,
@@ -29,7 +30,7 @@ export function Sidebar({
       {/* File Tree Sidebar */}
       <div
         className={`relative transition-all duration-300 ease-in-out flex-shrink-0 ${
-          isFileTreeCollapsed ? "w-0" : "w-80"
+          isFileTreeCollapsed ? "w-0" : "w-md"
         }`}
       >
         <div
@@ -43,7 +44,7 @@ export function Sidebar({
             {/* Sidebar Content */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
               <div className="flex items-center p-4 border-b border-gray-100 justify-between flex-shrink-0">
-                <TabsList className="border-b border-gray-100 flex-shrink-0">
+                <TabsList className="border-b border-gray-100 flex-shrink-0 w-80">
                   <TabsTrigger value="files" className="flex-1 text-sm">
                     Files
                   </TabsTrigger>
@@ -71,6 +72,9 @@ export function Sidebar({
                   setGraph={setGraph}
                   setLoadingAnalysis={setLoadingAnalysis}
                 />
+              </TabsContent>
+              <TabsContent value="analysis" className="flex-1 min-h-0">
+                <AnalysisTab />
               </TabsContent>
             </div>
           </Tabs>
