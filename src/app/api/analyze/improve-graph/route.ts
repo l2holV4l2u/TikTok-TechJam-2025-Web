@@ -22,13 +22,24 @@ const requestSchema = z.object({
   edges: z.array(z.object({
     source: z.string(),
     target: z.string(),
-    kind: z.string(), // This matches the actual structure from analyze-core
+    kind: z.string(),
   })),
   context: z.object({
     owner: z.string(),
     repo: z.string(),
   }).optional(),
 });
+
+type ValidationResult = {
+  originalNodeIdsEcho: string[];
+  edgeNodeCheck: {
+    unknownSources: string[];
+    unknownTargets: string[];
+  };
+  duplicateIds: string[];
+  danglingEdges: string[];
+  notes?: string;
+};
 
 type ImprovementResult = {
   status: "ok" | "improved";
@@ -42,7 +53,195 @@ type ImprovementResult = {
     edges: GraphEdge[];
   };
   suggestions?: string[];
+  validation?: ValidationResult;
+  improvedEdges?: Array<{
+    source: string;
+    target: string;
+    type: "add" | "remove" | "modify";
+    kind?: string;
+    reason?: string;
+  }>;
 };
+
+// Helper functions
+function detectCycles(edges: Array<{source: string, target: string}>): string[][] {
+  const graph = new Map<string, string[]>();
+  const nodes = new Set<string>();
+  
+  // Build adjacency list
+  edges.forEach(edge => {
+    nodes.add(edge.source);
+    nodes.add(edge.target);
+    if (!graph.has(edge.source)) {
+      graph.set(edge.source, []);
+    }
+    graph.get(edge.source)!.push(edge.target);
+  });
+  
+  const cycles: string[][] = [];
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  
+  function dfs(node: string, path: string[]): void {
+    if (visiting.has(node)) {
+      const cycleStart = path.indexOf(node);
+      if (cycleStart !== -1) {
+        cycles.push([...path.slice(cycleStart), node]);
+      }
+      return;
+    }
+    
+    if (visited.has(node)) return;
+    
+    visiting.add(node);
+    path.push(node);
+    
+    const neighbors = graph.get(node) || [];
+    neighbors.forEach(neighbor => dfs(neighbor, path));
+    
+    visiting.delete(node);
+    visited.add(node);
+    path.pop();
+  }
+  
+  nodes.forEach(node => {
+    if (!visited.has(node)) {
+      dfs(node, []);
+    }
+  });
+  
+  return cycles;
+}
+
+function validateEdges(
+  originalNodes: Array<{id: string}>,
+  improvedEdges: Array<{source: string, target: string}>
+): ValidationResult {
+  const originalNodeIds = originalNodes.map(n => n.id);
+  const nodeIdSet = new Set(originalNodeIds);
+  
+  const unknownSources = improvedEdges
+    .map(e => e.source)
+    .filter(id => !nodeIdSet.has(id))
+    .filter((id, index, arr) => arr.indexOf(id) === index); // unique
+    
+  const unknownTargets = improvedEdges
+    .map(e => e.target)
+    .filter(id => !nodeIdSet.has(id))
+    .filter((id, index, arr) => arr.indexOf(id) === index); // unique
+    
+  const duplicateIds = originalNodeIds.filter((id, index) => 
+    originalNodeIds.indexOf(id) !== index
+  );
+  
+  const danglingEdges = improvedEdges
+    .filter(e => !nodeIdSet.has(e.source) || !nodeIdSet.has(e.target))
+    .map(e => `${e.source} → ${e.target}`);
+  
+  return {
+    originalNodeIdsEcho: originalNodeIds,
+    edgeNodeCheck: {
+      unknownSources,
+      unknownTargets
+    },
+    duplicateIds,
+    danglingEdges
+  };
+}
+
+function sanitizeAndMergeGraph(
+  originalNodes: Array<{id: string, kind: string, definedIn: any, usedIn: string[]}>,
+  originalEdges: Array<{source: string, target: string, kind: string}>,
+  aiImprovedEdges: Array<{source: string, target: string, type?: string, kind?: string}>
+): {
+  improvedNodes: GraphNode[];
+  improvedEdges: GraphEdge[];
+  improvedEdgesWithOperations: Array<{
+    source: string;
+    target: string;
+    type: "add" | "remove" | "modify";
+    kind?: string;
+    reason?: string;
+  }>;
+} {
+  const nodeIdSet = new Set(originalNodes.map(n => n.id));
+  
+  // Sanitize: remove edges with unknown nodes
+  const sanitizedAiEdges = aiImprovedEdges.filter(e => 
+    nodeIdSet.has(e.source) && nodeIdSet.has(e.target)
+  );
+  
+  // Convert original edges to comparable format
+  const originalEdgeSet = new Set(
+    originalEdges.map(e => `${e.source}→${e.target}→${e.kind}`)
+  );
+  
+  const improvedEdgeSet = new Set(
+    sanitizedAiEdges.map(e => `${e.source}→${e.target}→${e.type || e.kind || 'dependsOn'}`)
+  );
+  
+  // Detect cycles in original graph and mark them for removal
+  const cycles = detectCycles(originalEdges);
+  const cyclicEdges = new Set<string>();
+  
+  cycles.forEach(cycle => {
+    for (let i = 0; i < cycle.length - 1; i++) {
+      const source = cycle[i];
+      const target = cycle[i + 1];
+      const edgeKey = `${source}→${target}`;
+      cyclicEdges.add(edgeKey);
+    }
+  });
+  
+  // Generate improved edges with operations
+  const improvedEdgesWithOperations: Array<{
+    source: string;
+    target: string;
+    type: "add" | "remove" | "modify";
+    kind?: string;
+    reason?: string;
+  }> = [];
+  
+  // Mark cyclic edges for removal
+  originalEdges.forEach(edge => {
+    const edgeKey = `${edge.source}→${edge.target}`;
+    if (cyclicEdges.has(edgeKey)) {
+      improvedEdgesWithOperations.push({
+        source: edge.source,
+        target: edge.target,
+        type: "remove",
+        kind: edge.kind,
+        reason: "Circular dependency detected"
+      });
+    }
+  });
+  
+  // Create final improved graph (original minus removed edges)
+  const removedEdgeKeys = new Set(
+    improvedEdgesWithOperations
+      .filter(e => e.type === "remove")
+      .map(e => `${e.source}→${e.target}→${e.kind}`)
+  );
+  
+  const finalImprovedEdges = originalEdges
+    .filter(e => !removedEdgeKeys.has(`${e.source}→${e.target}→${e.kind}`))
+    .map(e => ({
+      source: e.source,
+      target: e.target,
+      type: e.kind
+    }));
+  
+  return {
+    improvedNodes: originalNodes.map(n => ({
+      id: n.id,
+      kind: n.kind,
+      definedIn: n.definedIn,
+      usedIn: n.usedIn
+    })),
+    improvedEdges: finalImprovedEdges,
+    improvedEdgesWithOperations
+  };
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -67,127 +266,48 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { nodes, edges, context } = requestSchema.parse(body);
 
-    // Prepare the prompt for ChatGPT 4o.mini
-    const graphAnalysisPrompt = `
-You are a dependency graph analysis expert. Analyze the following Kotlin dependency graph and determine if it can be improved.
-
-Context: ${context ? `Repository: ${context.owner}/${context.repo}` : "Unknown repository"}
-
-Current Graph Structure:
-Nodes (${nodes.length} total):
-${nodes.map(node => `- ${node.id} (${node.kind}) defined in ${node.definedIn.file}:${node.definedIn.line}`).join('\n')}
-
-Edges (${edges.length} total):
-${edges.map(edge => `- ${edge.source} → ${edge.target} (${edge.kind})`).join('\n')}
-You are given a dependency graph of a software project.
-
-Return results STRICTLY as JSON (no extra text) with this structure:
-
-{
-  "status": "ok" | "improved",
-  "message": "Brief explanation of the analysis",
-  "issues": ["list of identified issues such as circular dependencies, unnecessary coupling, missing abstraction layers, DIP violations, poor modularization"],
-  "suggestions": ["list of improvement suggestions based on the issues found"],
-  "improvedNodes": [
-    {
-      "id": "node_id",
-      "kind": "class" | "interface" | "module" | "function",
-      "definedIn": {"file": "path/to/file", "line": number},
-      "usedIn": ["list of places this node is used, if applicable"]
-    }
-  ],
-  "improvedEdges": [
-    {
-      "source": "source_node_id",
-      "target": "target_node_id",
-      "type": "dependsOn" | "imports" | "implements" | "extends"
-    }
-  ],
-  "validation": {
-    "originalNodeIdsEcho": ["exact list of ALL node IDs from the input graph"],
-    "edgeNodeCheck": {
-      "unknownSources": ["any source ids in improvedEdges not found in originalNodeIdsEcho"],
-      "unknownTargets": ["any target ids in improvedEdges not found in originalNodeIdsEcho"]
-    },
-    "duplicateIds": ["any duplicated node ids you detect"],
-    "danglingEdges": ["stringified edges that reference missing nodes, must be []"],
-    "notes": "Any constraints you applied or corrections you made"
-  }
-}
-
-Analysis tasks:
-1) Detect circular dependencies (cycles).
-2) Identify unnecessary coupling (mutual or dense pairwise dependencies without clear need).
-3) Find missing abstraction layers (e.g., high-level modules directly depending on low-level details).
-4) Detect Dependency Inversion Principle violations (high-level depending on low-level implementations rather than abstractions).
-5) Suggest better modularization (split/merge/restructure).
-
-HARD RULES (must follow):
-- DO NOT invent or rename nodes. Keep node IDs EXACTLY as in the input graph.
-- You may NOT create new nodes. If you want to propose new abstractions, describe them in "suggestions" only.
-- "improvedEdges" must ONLY reference node IDs present in "originalNodeIdsEcho". If an edge would reference a non-existent node, omit it and explain in "validation.notes".
-- If no changes are needed, set "status":"ok" and leave "improvedNodes" and "improvedEdges" as empty arrays.
-- If improvements are possible, set "status":"improved" and include ONLY modified connections in "improvedEdges". Do not include unchanged edges.
-- The response MUST be valid JSON. No commentary outside the JSON object.
-
-Quality checks before you output:
-- Ensure "validation.edgeNodeCheck.unknownSources" and "unknownTargets" are both [].
-- Ensure "validation.danglingEdges" is [].
-- Ensure every id in "improvedNodes" also appears in "originalNodeIdsEcho" (we are not adding nodes, only highlighting improved ones).
-- Keep the JSON under 50KB.
-`;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert in software architecture and dependency analysis. Respond only with valid JSON."
+    // Detect issues locally first
+    const cycles = detectCycles(edges);
+    const hasCycles = cycles.length > 0;
+    
+    let result: ImprovementResult;
+    
+    if (!hasCycles) {
+      // No improvements needed
+      result = {
+        status: "ok",
+        message: "Graph is already well-structured with no circular dependencies",
+        suggestions: ["Graph structure appears optimal"],
+        validation: validateEdges(nodes, edges)
+      };
+    } else {
+      // Apply improvements using local analysis
+      const { improvedNodes, improvedEdges, improvedEdgesWithOperations } = 
+        sanitizeAndMergeGraph(nodes, edges, []);
+      
+      const validation = validateEdges(nodes, improvedEdges);
+      
+      result = {
+        status: "improved",
+        message: `Improved graph by removing ${improvedEdgesWithOperations.length} circular dependencies`,
+        originalGraph: { 
+          nodes: nodes.map(n => ({ ...n })), 
+          edges: edges.map(e => ({ ...e, type: e.kind }))
         },
-        {
-          role: "user",
-          content: graphAnalysisPrompt
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 2000,
-    });
-
-    const responseText = completion.choices[0]?.message?.content;
-    if (!responseText) {
-      throw new Error("No response from OpenAI");
-    }
-
-    let aiResponse;
-    try {
-      aiResponse = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", responseText);
-      throw new Error("Invalid JSON response from AI");
-    }
-
-    const result: ImprovementResult = {
-      status: aiResponse.status || "ok",
-      message: aiResponse.message || "Analysis completed",
-      suggestions: aiResponse.suggestions || [],
-    };
-
-    if (aiResponse.status === "improved") {
-      result.originalGraph = { 
-        nodes, 
-        edges: edges.map(e => ({ ...e, type: e.kind })) 
-      };
-      result.improvedGraph = {
-        nodes: aiResponse.improvedNodes || nodes,
-        edges: (aiResponse.improvedEdges || edges).map((e: any) => ({ 
-          source: e.source, 
-          target: e.target, 
-          type: e.type || e.kind 
-        })),
+        improvedGraph: {
+          nodes: improvedNodes,
+          edges: improvedEdges
+        },
+        suggestions: [
+          `Removed ${improvedEdgesWithOperations.length} edges to break circular dependencies`,
+          "Consider introducing interfaces or abstraction layers to reduce coupling",
+          "Review the removed dependencies to ensure functionality is preserved"
+        ],
+        validation,
+        improvedEdges: improvedEdgesWithOperations
       };
     }
-    console.log("improve-graph result:", result.improvedGraph?.edges);
-    console.log(result.improvedGraph?.nodes)
+
     return Response.json(result);
   } catch (err: any) {
     console.error("improve-graph error:", err);
