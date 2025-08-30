@@ -15,10 +15,18 @@ import {
 } from "@xyflow/react";
 import React, { useState, useCallback, useMemo } from "react";
 import "@xyflow/react/dist/style.css";
-import { createEdgeFromData, getLayoutedElements } from "../app/utils/graphUtils";
+import {
+  createEdgeFromData,
+  getLayoutedElements,
+} from "../app/utils/graphUtils";
 import { DependencyGraphProps, GraphNode } from "../app/types/graphTypes";
 
-const createNodeFromData = (node: GraphNode, index: number): Node => {
+function getNodeLabel(nodeId: string): string {
+  const parts = nodeId.split(".");
+  return parts[parts.length - 1].toUpperCase();
+}
+
+function createNodeFromData(node: GraphNode, index: number) {
   const colors = [
     "from-purple-500 to-indigo-600",
     "from-blue-500 to-cyan-600",
@@ -40,13 +48,13 @@ const createNodeFromData = (node: GraphNode, index: number): Node => {
               colors[index % colors.length]
             } flex items-center justify-center mb-2 shadow-lg`}
           >
-            <span className="text-white font-bold text-lg">
-              {node.label.charAt(0).toUpperCase()}
-            </span>
+            <div className="text-white font-bold text-lg">
+              {getNodeLabel(node.id)}
+            </div>
           </div>
-          <span className="text-sm font-medium text-gray-700 text-center leading-tight">
-            {node.label}
-          </span>
+          <div className="text-sm font-medium text-gray-700 text-center leading-tight">
+            {getNodeLabel(node.id)}
+          </div>
         </div>
       ),
     },
@@ -64,7 +72,7 @@ const createNodeFromData = (node: GraphNode, index: number): Node => {
     sourcePosition: Position.Bottom,
     targetPosition: Position.Top,
   };
-};
+}
 
 export const DependencyGraph: React.FC<DependencyGraphProps> = ({
   nodes: inputNodes,

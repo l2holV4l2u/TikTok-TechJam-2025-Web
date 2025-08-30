@@ -33,7 +33,10 @@ let kotlinModP: Promise<any> | null = null;
 async function createParser(): Promise<ParserNS> {
   if (!parserModP) parserModP = import("tree-sitter");
   if (!kotlinModP) kotlinModP = import("tree-sitter-kotlin");
-  const [{ default: Parser }, Kotlin] = await Promise.all([parserModP, kotlinModP]);
+  const [{ default: Parser }, Kotlin] = await Promise.all([
+    parserModP,
+    kotlinModP,
+  ]);
   const KotlinLang = (Kotlin as any).default ?? (Kotlin as any);
   const p = new Parser();
   p.setLanguage(KotlinLang);
@@ -93,7 +96,11 @@ function collectImports(code: string): Record<string, string> {
   }
   return map;
 }
-function qualify(raw: string, pkg: string, imports: Record<string, string>): string {
+function qualify(
+  raw: string,
+  pkg: string,
+  imports: Record<string, string>
+): string {
   let base = raw.replace(/\s+/g, "");
   base = base.replace(/<[^<>]*>/g, "");
   base = base.replace(/\?+$/, "");
@@ -105,7 +112,11 @@ function hasProvidesAnnotation(node: SyntaxNode, code: string): boolean {
   if (mods) {
     for (let i = 0; i < mods.namedChildCount; i++) {
       const c = mods.namedChild(i)!;
-      if (c.type === "annotation" && code.slice(c.startIndex, c.endIndex).includes("@Provides")) return true;
+      if (
+        c.type === "annotation" &&
+        code.slice(c.startIndex, c.endIndex).includes("@Provides")
+      )
+        return true;
     }
   }
   const head = code.slice(Math.max(0, node.startIndex - 160), node.startIndex);
@@ -113,11 +124,15 @@ function hasProvidesAnnotation(node: SyntaxNode, code: string): boolean {
 }
 function providesTargetFromAnnotationText(txt: string): string | null {
   // No /s flag needed
-  const m = txt.match(/@Provides\s*\(\s*(?:\w+\s*=\s*)?([\w.]+)\s*::\s*class\s*\)/);
+  const m = txt.match(
+    /@Provides\s*\(\s*(?:\w+\s*=\s*)?([\w.]+)\s*::\s*class\s*\)/
+  );
   return m ? m[1] : null;
 }
 function returnTypeFromProvidesFunction(text: string): string | null {
-  const m = text.match(/:\s*(?:@[A-Za-z0-9_.]+(?:\([^)]*\))?\s*)*([A-Za-z0-9_.<>?]+)/);
+  const m = text.match(
+    /:\s*(?:@[A-Za-z0-9_.]+(?:\([^)]*\))?\s*)*([A-Za-z0-9_.<>?]+)/
+  );
   return m ? m[1] : null;
 }
 function classHeaderParamTypes(classText: string): string[] {
@@ -130,10 +145,6 @@ function classHeaderParamTypes(classText: string): string[] {
   while ((m = re.exec(inside))) out.push(m[1]);
   return out;
 }
-function propByDiType(propText: string): string | null {
-  const m = propText.match(/\b(val|var)\s+\w+\s*:\s*([A-Za-z0-9_.<>?]+)\s+by\s+di\b/);
-  return m ? m[2] : null;
-}
 function unwrapKnownWrappers(t: string): string {
   const m = t.match(/^([A-Za-z0-9_.]+)\s*<\s*([^>]+)\s*>$/);
   if (!m) return t;
@@ -145,7 +156,9 @@ function unwrapKnownWrappers(t: string): string {
 }
 
 // ---- analyze in-memory .kt files ----
-export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResult> {
+export async function analyzeFiles(
+  files: InMemoryFile[]
+): Promise<AnalysisResult> {
   const parser = await createParser();
 
   const nodesMap: Record<string, NodeMeta> = {};
@@ -153,10 +166,22 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
   const rawEdges: Edge[] = [];
 
   const addDefinedNode = (id: string, file: string, line: number) => {
-    if (!nodesMap[id]) nodesMap[id] = { id, kind: "class", definedIn: { file, line }, usedIn: [] };
+    if (!nodesMap[id])
+      nodesMap[id] = {
+        id,
+        kind: "class",
+        definedIn: { file, line },
+        usedIn: [],
+      };
     (fileToDefinedNodesSet[file] ||= new Set()).add(id);
   };
-  const addRawEdge = (source: string, target: string, kind: Edge["kind"], file: string, line: number) => {
+  const addRawEdge = (
+    source: string,
+    target: string,
+    kind: Edge["kind"],
+    file: string,
+    line: number
+  ) => {
     rawEdges.push({ source, target, kind, sourceLocation: { file, line } });
   };
 
@@ -169,16 +194,29 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
 
     // (1) definitions
     walk(tree.rootNode, (n) => {
-      if (n.type === "class_declaration" || n.type === "interface_declaration") {
+      if (
+        n.type === "class_declaration" ||
+        n.type === "interface_declaration"
+      ) {
         const name = simpleIdentifierFrom(n, code);
-        if (name) addDefinedNode(qualify(name, pkg, imports), rel, n.startPosition.row + 1);
+        if (name)
+          addDefinedNode(
+            qualify(name, pkg, imports),
+            rel,
+            n.startPosition.row + 1
+          );
       }
       if (n.type === "object_declaration") {
         const startIndex = (n as any).startIndex;
         const head = code.slice(startIndex, startIndex + 60);
         if (/^\s*companion\s+object\b/.test(head)) return;
         const name = simpleIdentifierFrom(n, code);
-        if (name) addDefinedNode(qualify(name, pkg, imports), rel, n.startPosition.row + 1);
+        if (name)
+          addDefinedNode(
+            qualify(name, pkg, imports),
+            rel,
+            n.startPosition.row + 1
+          );
       }
     });
 
@@ -191,15 +229,29 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
           const start = (n as any).startIndex;
           const end = (n as any).endIndex;
           const classText = code.slice(start, end);
-          const annWindow = code.slice(Math.max(0, start - 200), start) + classText.slice(0, 200);
+          const annWindow =
+            code.slice(Math.max(0, start - 200), start) +
+            classText.slice(0, 200);
           const target = providesTargetFromAnnotationText(annWindow);
           if (target) {
             const provided = qualify(target, pkg, imports);
-            addRawEdge(provided, classFqn, "provider-param", rel, n.startPosition.row + 1);
+            addRawEdge(
+              provided,
+              classFqn,
+              "provider-param",
+              rel,
+              n.startPosition.row + 1
+            );
           } else {
             for (const t of classHeaderParamTypes(classText)) {
               const dep = qualify(t, pkg, imports);
-              addRawEdge(classFqn, dep, "provider-param", rel, n.startPosition.row + 1);
+              addRawEdge(
+                classFqn,
+                dep,
+                "provider-param",
+                rel,
+                n.startPosition.row + 1
+              );
             }
           }
         }
@@ -215,8 +267,18 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
             if (!p || p.type !== "parameter") continue;
             const t = firstChildOfType(p, "type");
             if (t) {
-              const dep = qualify(code.slice((t as any).startIndex, (t as any).endIndex), pkg, imports);
-              addRawEdge(ownerFqn, dep, "provider-param", rel, t.startPosition.row + 1);
+              const dep = qualify(
+                code.slice((t as any).startIndex, (t as any).endIndex),
+                pkg,
+                imports
+              );
+              addRawEdge(
+                ownerFqn,
+                dep,
+                "provider-param",
+                rel,
+                t.startPosition.row + 1
+              );
             }
           }
         }
@@ -234,7 +296,13 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
             let m: RegExpExecArray | null;
             while ((m = re.exec(params))) {
               const dep = qualify(m[1], pkg, imports);
-              addRawEdge(provided, dep, "provider-param", rel, (n as any).startPosition.row + 1);
+              addRawEdge(
+                provided,
+                dep,
+                "provider-param",
+                rel,
+                (n as any).startPosition.row + 1
+              );
             }
           }
         }
@@ -244,8 +312,10 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
         const start = (n as any).startIndex;
         const end = (n as any).endIndex;
         const text = code.slice(start, end);
-        const annWindow = code.slice(Math.max(0, start - 200), start) + text.slice(0, 200);
-        const hasAnn = hasProvidesAnnotation(n, code) || /@Provides\s*\(/.test(annWindow);
+        const annWindow =
+          code.slice(Math.max(0, start - 200), start) + text.slice(0, 200);
+        const hasAnn =
+          hasProvidesAnnotation(n, code) || /@Provides\s*\(/.test(annWindow);
         if (hasAnn) {
           const target = providesTargetFromAnnotationText(annWindow);
           if (target) {
@@ -253,7 +323,13 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
             const m = text.match(/:\s*([A-Za-z0-9_.<>?]+)/);
             if (m) {
               const impl = qualify(m[1], pkg, imports);
-              addRawEdge(provided, impl, "provider-param", rel, (n as any).startPosition.row + 1);
+              addRawEdge(
+                provided,
+                impl,
+                "provider-param",
+                rel,
+                (n as any).startPosition.row + 1
+              );
             }
           }
         }
@@ -266,22 +342,42 @@ export async function analyzeFiles(files: InMemoryFile[]): Promise<AnalysisResul
       const text = code.slice((n as any).startIndex, (n as any).endIndex);
       if (!/\bby\s+di\b/.test(text)) return;
 
-      const m = text.match(/\b(val|var)\s+\w+\s*:\s*([A-Za-z0-9_.<>?]+)\s+by\s+di\b/);
+      const m = text.match(
+        /\b(val|var)\s+\w+\s*:\s*([A-Za-z0-9_.<>?]+)\s+by\s+di\b/
+      );
       const rawType = m ? m[2] : null;
       if (!rawType) return;
 
       const unwrapped = unwrapKnownWrappers(rawType);
       const req = qualify(unwrapped, pkg, imports);
 
-      let ownerNode =
-        ancestorOfType(n, ["class_declaration", "object_declaration", "interface_declaration", "companion_object"]);
+      let ownerNode = ancestorOfType(n, [
+        "class_declaration",
+        "object_declaration",
+        "interface_declaration",
+        "companion_object",
+      ]);
       if (ownerNode && ownerNode.type === "companion_object") {
-        ownerNode = ancestorOfType(ownerNode, ["class_declaration", "object_declaration", "interface_declaration"]);
+        ownerNode = ancestorOfType(ownerNode, [
+          "class_declaration",
+          "object_declaration",
+          "interface_declaration",
+        ]);
       }
-      const ownerName = ownerNode ? simpleIdentifierFrom(ownerNode, code) : null;
-      const ownerFqn = ownerName ? qualify(ownerName, pkg, imports) : "UnknownOwner";
+      const ownerName = ownerNode
+        ? simpleIdentifierFrom(ownerNode, code)
+        : null;
+      const ownerFqn = ownerName
+        ? qualify(ownerName, pkg, imports)
+        : "UnknownOwner";
 
-      addRawEdge(ownerFqn, req, "consumer-requests", rel, (n as any).startPosition.row + 1);
+      addRawEdge(
+        ownerFqn,
+        req,
+        "consumer-requests",
+        rel,
+        (n as any).startPosition.row + 1
+      );
     });
   }
 

@@ -17,35 +17,19 @@ import {
   ChevronRight,
   ChevronDown,
   PanelLeft,
+  Network,
 } from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "@/components/graph";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DependencyGraphProps } from "@/app/types/graphTypes";
+import { AnalysisResult, DependencyGraphProps } from "@/app/types/graphTypes";
 import { analyzeGraph } from "@/app/api/chat/route";
-interface RepoClientProps {
-  owner: string;
-  name: string;
-}
-
-interface FileTreeResponse {
-  tree: FileNode[];
-  truncated: boolean;
-  defaultBranch: string;
-  totalFiles: number;
-}
-
-interface FileContentResponse {
-  content: string | null;
-  base64Content: string;
-  size: number;
-  path: string;
-  mimeType: string;
-  isBinary: boolean;
-  isText: boolean;
-  sha: string;
-  downloadUrl: string;
-}
+import {
+  FileContentResponse,
+  FileTreeResponse,
+  RepoClientProps,
+} from "@/app/types/repoTypes";
+import { toast } from "sonner";
 
 export default function RepoClient({ owner, name }: RepoClientProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
@@ -59,15 +43,21 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [repoAnalysisCache, setRepoAnalysisCache] = useState<any>(null);
+  const [fileAnalysisCache, setFileAnalysisCache] = useState<Map<string, any>>(
+    new Map()
+  );
 
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
-  // graph
-  const [chatGraph, setChatGraph] = useState<DependencyGraphProps | null>(null);
   const [graph, setGraph] = useState<DependencyGraphProps | null>(null);
-  const [loadingChatGraph, setLoadingChatGraph] = useState(false);
-  const [loadingGraph, setLoadingGraph] = useState(false);
+  const [currentAnalysisType, setCurrentAnalysisType] = useState<
+    "repo" | "file" | null
+  >(null);
 
   const repoFullName = `${owner}/${name}`;
+
   const fetchFileTree = async () => {
     try {
       setLoading(true);
@@ -104,11 +94,99 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
       setFileTree(filterKotlinFiles(data.tree));
       setError(null);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch repository tree"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to fetch repository tree";
+      setError(errorMessage);
+      toast.error("Failed to load repository", {
+        description: errorMessage,
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const analyzeFile = async (
+    fileData: FileContentResponse,
+    owner: string,
+    repo: string
+  ) => {
+    try {
+      setLoadingAnalysis(true);
+
+      const response = await fetch("/api/analyze/file", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          path: fileData.path,
+          content: fileData.content,
+          owner,
+          repo,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.statusText}`);
+      }
+
+      const analysis: AnalysisResult = await response.json();
+      setAnalysisResult(analysis);
+
+      console.log(analysis);
+
+      // Update graph with analysis results
+      if (analysis.nodes && analysis.edges) {
+        setGraph({
+          nodes: analysis.nodes,
+          edges: analysis.edges,
+        });
+      }
+
+      return analysis;
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to analyze file";
+      setError(errorMessage);
+      toast.error("File analysis failed", {
+        description: errorMessage,
+      });
+    } finally {
+      setLoadingAnalysis(false);
+    }
+  };
+
+  // Analyze entire repository
+  const analyzeRepository = async () => {
+    try {
+      setLoadingAnalysis(true);
+
+      const response = await fetch(
+        `/api/analyze/github?owner=${owner}&repo=${name}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Repository analysis failed: ${response.statusText}`);
+      }
+
+      const analysis = await response.json();
+      setAnalysisResult(analysis);
+
+      // Update graph with analysis results
+      if (analysis.nodes && analysis.edges) {
+        setGraph({
+          nodes: analysis.nodes,
+          edges: analysis.edges,
+        });
+      }
+
+      return analysis;
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to analyze repository"
+      );
+    } finally {
+      setLoadingAnalysis(false);
     }
   };
 
@@ -128,30 +206,29 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
       const data: FileContentResponse = await response.json();
       setFileContent(data);
       setSelectedFile(path);
-      console.log(data);
+
+      // Automatically analyze the file after fetching content
+      analyzeFile(data, owner, name);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch file content"
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to fetch file content";
+      setError(errorMessage);
+      toast.error("Failed to load file", {
+        description: errorMessage,
+      });
     } finally {
       setLoadingFile(false);
     }
   };
 
-  const fetchChatGraph = async () => {
-    try {
-      const response = await analyzeGraph(graph!);
-      // setChatGraph(response);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to analyze dependency graph"
-      );
-    }
-  };
   useEffect(() => {
-    fetchFileTree();
+    const initializeRepo = async () => {
+      await fetchFileTree();
+      // Automatically analyze repository after tree is loaded
+      await analyzeRepository();
+    };
+
+    initializeRepo();
   }, [owner, name]);
 
   const toggleFolder = (path: string) => {
@@ -172,12 +249,12 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     return nodes.map((node) => (
       <div key={node.path}>
         <div
-          className={`flex items-center gap-2 py-2 px-3 hover:bg-gray-50 cursor-pointer text-sm transition-colors ${
+          className={`flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors ${
             selectedFile === node.path
               ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
               : "text-gray-700"
           }`}
-          style={{ paddingLeft: `${(depth + 1) * 12 + 12}px` }}
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
           onClick={() => {
             if (node.type === "folder") {
               toggleFolder(node.path);
@@ -222,19 +299,30 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     <div className="h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 p-4 w-full">
-        <div className="flex items-center gap-4 justify-between">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Link>
-          </Button>
-
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-4">
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Link>
+            </Button>
             <div className="flex gap-1 items-center">
               <Github size={18} className="text-gray-800" />
               <h1 className="font-medium text-gray-900">{repoFullName}</h1>
             </div>
+          </div>
+
+          <div className="flex gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={analyzeRepository}
+              disabled={loadingAnalysis}
+            >
+              <Network className="w-4 h-4 mr-2" />
+              {loadingAnalysis ? "Analyzing..." : "Analyze Repository"}
+            </Button>
             <Button variant="outline" size="sm" asChild>
               <a
                 href={`https://github.com/${repoFullName}`}
@@ -249,27 +337,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           </div>
         </div>
       </header>
-
-      {/* Error Banner */}
-      {error && (
-        <div className="container mx-auto px-4 pt-4">
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-red-800">
-                <AlertCircle size={18} />
-                <span>{error}</span>
-              </div>
-              <Button
-                variant="outline"
-                onClick={fetchFileTree}
-                className="mt-2"
-              >
-                Try Again
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
@@ -374,8 +441,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                                 fetchFileContent(file.path, file.sha!)
                               }
                             >
-                              <File className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                              <span className="flex-1 min-w-0 truncate">
+                              <File className="w-4 h-4 text-gray-500" />
+                              <span className="flex-1 truncate">
                                 {file.name}
                               </span>
                             </div>
@@ -400,21 +467,42 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
         )}
 
         {/* Main Content Area */}
-        <div className="flex-1 bg-gray-50 min-w-0">
-          <DependencyGraph
-            nodes={[
-              { id: "A", label: "Core Module" },
-              { id: "B", label: "Auth Service" },
-              { id: "C", label: "User API" },
-              { id: "D", label: "Frontend" },
-            ]}
-            edges={[
-              { source: "A", target: "B" },
-              { source: "A", target: "C" },
-              { source: "B", target: "D" },
-              { source: "C", target: "D" },
-            ]}
-          />
+        <div className="flex-1 bg-gray-50 min-w-0 flex flex-col">
+          {/* Graph Content */}
+          <div className="flex-1 min-h-0">
+            {loadingAnalysis ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Network className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
+                  <p className="text-gray-600">Analyzing dependencies...</p>
+                </div>
+              </div>
+            ) : graph ? (
+              <DependencyGraph nodes={graph.nodes} edges={graph.edges} />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">
+                    No dependency analysis yet
+                  </p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Click "Analyze Repository" to see the full dependency graph,
+                    or select a file and click "Analyze Current File" for
+                    single-file analysis.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={analyzeRepository}
+                    disabled={loadingAnalysis}
+                  >
+                    <Network className="w-4 h-4 mr-2" />
+                    Analyze Repository
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
