@@ -20,18 +20,6 @@ export type DependencyGraphProps = {
   className?: string;
 };
 
-export type AnalysisResult = {
-  file: {
-    path: string;
-    owner: string;
-    repo: string;
-  };
-  fileCount: number;
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  fileToDefinedNodes: Record<string, string[]>;
-};
-
 export type CycleInfo = {
   cycles: string[][];
   cycleNodes: Set<string>;
