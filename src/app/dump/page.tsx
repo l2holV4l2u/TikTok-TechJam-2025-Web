@@ -1,6 +1,6 @@
 "use client";
 
-import { DependencyGraph } from "../components/graph";
+import { DependencyGraph } from "../../components/graph";
 
 export default function Dump() {
   return (
