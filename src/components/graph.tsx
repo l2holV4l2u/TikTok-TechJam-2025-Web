@@ -47,18 +47,15 @@ function createNodeFromData(node: GraphNode, index: number) {
     position: { x: 0, y: 0 },
     data: {
       label: (
-        <div className="flex flex-col items-center justify-center p-3 min-w-[120px]">
+        <div className="flex flex-col items-center justify-center p-3">
           <div
             className={`rounded-sm bg-gradient-to-br ${
               colors[index % colors.length]
-            } flex items-center justify-center mb-2 shadow-lg p-1`}
+            } flex items-center justify-center shadow-lg p-1`}
           >
-            <div className="text-white font-bold text-sm">
+            <div className="text-white font-bold line-clamp-3 break-words w-24 h-16 items-center justify-center">
               {getNodeLabel(node.id)}
             </div>
-          </div>
-          <div className="text-sm font-medium text-gray-700 text-center leading-tight">
-            {node.kind}
           </div>
         </div>
       ),
