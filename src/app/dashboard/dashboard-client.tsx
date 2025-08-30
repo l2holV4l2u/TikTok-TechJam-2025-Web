@@ -225,7 +225,7 @@ export default function DashboardClient({ session }: DashboardClientProps) {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={searching}>
+                <Button className="text-black/70" type="submit" disabled={searching}>
                   {searching ? "Searching..." : "Search"}
                 </Button>
               </div>
