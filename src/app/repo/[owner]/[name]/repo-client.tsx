@@ -4,7 +4,14 @@ import { useState, useEffect } from "react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
 import { FileNode } from "@/lib/tree";
-import { Github, ArrowLeft, Eye, Network, GitCompare } from "lucide-react";
+import {
+  Github,
+  ArrowLeft,
+  Eye,
+  Network,
+  GitCompare,
+  ExternalLink,
+} from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "@/components/graph";
 import { GraphComparison } from "@/components/graph-comparison";
@@ -35,7 +42,10 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
       return;
     }
 
-    console.log("analyzeSelected called with paths:", Array.from(selectedPaths));
+    console.log(
+      "analyzeSelected called with paths:",
+      Array.from(selectedPaths)
+    );
 
     try {
       setLoadingAnalysis(true);
@@ -45,7 +55,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
         repo: name,
         includePaths: Array.from(selectedPaths),
       };
-      
+
       console.log("Sending request body:", requestBody);
 
       const response = await fetch("/api/analyze/github", {
@@ -62,7 +72,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
       }
 
       const analysis = await response.json();
-      
+
       // console.log("Received analysis result:", analysis);
       // console.log("Analysis selection info:", analysis.selection);
       // console.log("Analysis file count:", analysis.repo?.fileCount);
@@ -73,15 +83,17 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           id: node.id,
           kind: node.kind,
           definedIn: node.definedIn,
-          usedIn: node.usedIn.map((usage: any) => `${usage.file}:${usage.line}`)
+          usedIn: node.usedIn.map(
+            (usage: any) => `${usage.file}:${usage.line}`
+          ),
         }));
-        
+
         const graphEdges = analysis.edges.map((edge: any) => ({
           source: edge.source,
           target: edge.target,
-          type: edge.kind
+          type: edge.kind,
         }));
-        
+
         setGraph({
           nodes: graphNodes,
           edges: graphEdges,
@@ -241,14 +253,21 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                 Back to Dashboard
               </Link>
             </Button>
-            <div className="flex gap-1 items-center">
+            <div className="flex gap-2 items-center">
               <Github size={18} className="text-gray-800" />
-              <h1 className="font-medium text-gray-900">{repoFullName}</h1>
+              <a
+                href={`https://github.com/${repoFullName}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline flex items-center gap-2 font-medium"
+              >
+                {repoFullName}
+                <ExternalLink size={16} className="text-gray-800" />
+              </a>
             </div>
           </div>
 
           <div className="flex gap-2">
-           
             <Button
               variant="outline"
               size="sm"
@@ -264,9 +283,9 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
               onClick={analyzeSelected}
               disabled={selectedPaths.size === 0}
             >
-                  Analyze Selected ({selectedPaths.size})
+              Analyze Selected ({selectedPaths.size})
             </Button>
-             {improvementResult && !showComparison && (
+            {improvementResult && !showComparison && (
               <Button
                 variant="outline"
                 size="sm"
@@ -348,8 +367,9 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                     variant="outline"
                     onClick={analyzeRepository}
                     disabled={loadingAnalysis}
+                    className="gap-2"
                   >
-                    <Network className="w-4 h-4 mr-2" />
+                    <Network className="w-4 h-4" />
                     Analyze Repository
                   </Button>
                 </div>

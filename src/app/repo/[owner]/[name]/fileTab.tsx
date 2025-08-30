@@ -165,7 +165,6 @@ export function FileTab({
     setExpandedFolders(newExpanded);
   };
 
-  // ====== ✅ NEW: Selection helpers (folders/files with indeterminate) ======
   const hasSelectedAncestor = (path: string) => {
     const parts = path.split("/");
     for (let i = parts.length - 1; i >= 1; i--) {
@@ -285,11 +284,17 @@ export function FileTab({
         <ScrollArea className="h-full">
           <div className="px-2">
             {loading ? (
-              Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2 px-2">
-                  <Skeleton className="w-4 h-4" />
-                  <Skeleton className="h-4 flex-1" />
-                </div>
+              Array.from({ length: 5 }).map((_, i) => (
+                <>
+                  <div key={i} className="flex items-center gap-2 p-2">
+                    <Skeleton className="w-4 h-4" />
+                    <Skeleton className="h-4 flex-1" />
+                  </div>
+                  <div key={i} className="flex items-center gap-2 p-2">
+                    <Skeleton className="w-4 h-4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </>
               ))
             ) : fileTree.length === 0 ? (
               <div className="p-4 text-center text-gray-500">

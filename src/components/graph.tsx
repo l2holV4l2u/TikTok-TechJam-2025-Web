@@ -11,7 +11,7 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import "@xyflow/react/dist/style.css";
 import {
   createEdgeFromData,
@@ -53,7 +53,7 @@ function createNodeFromData(node: GraphNode, index: number) {
               colors[index % colors.length]
             } flex items-center justify-center shadow-lg p-1`}
           >
-            <div className="text-white font-bold line-clamp-3 break-words w-24 h-16 items-center justify-center">
+            <div className="text-white font-bold line-clamp-3 text-lg break-words truncate w-24 h-16 items-center justify-center">
               {getNodeLabel(node.id)}
             </div>
           </div>
@@ -92,6 +92,11 @@ export const DependencyGraph = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges]);
 
   const adjacency = useMemo(() => {
     const parentsMap = new Map<string, Set<string>>();
