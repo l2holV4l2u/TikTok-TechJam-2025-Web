@@ -60,6 +60,22 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
 
   const repoFullName = `${owner}/${name}`;
 
+  // Navigation functions for graph views
+  const handleViewOriginal = () => {
+    setShowComparison(false);
+    // Graph is already set to original from the analysis
+  };
+
+  const handleViewImproved = () => {
+    if (improvementResult?.improvedGraph) {
+      setGraph({
+        nodes: improvementResult.improvedGraph.nodes,
+        edges: improvementResult.improvedGraph.edges,
+      });
+      setShowComparison(false);
+    }
+  };
+
   const fetchFileTree = async () => {
     try {
       setLoading(true);
@@ -417,6 +433,17 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
               <Wand2 className="w-4 h-4 mr-2" />
               {loadingImprovement ? "Improving..." : "Improve Graph with AI"}
             </Button>
+            {improvementResult?.improvedGraph && !showComparison && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowComparison(true)}
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                View Comparison
+              </Button>
+            )}
             <Button variant="outline" size="sm" asChild>
               <a
                 href={`https://github.com/${repoFullName}`}
@@ -566,16 +593,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           <div className="flex-1 min-h-0">
             {showComparison && improvementResult ? (
               <div className="h-full flex flex-col">
-                <div className="p-4 bg-white border-b border-gray-200">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowComparison(false)}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Original Graph
-                  </Button>
-                </div>
                 <div className="flex-1 p-4 overflow-auto">
                   <GraphComparison
                     status={improvementResult.status}
@@ -583,6 +600,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                     originalGraph={improvementResult.originalGraph}
                     improvedGraph={improvementResult.improvedGraph}
                     suggestions={improvementResult.suggestions}
+                    onViewOriginal={handleViewOriginal}
+                    onViewImproved={handleViewImproved}
                   />
                 </div>
               </div>
