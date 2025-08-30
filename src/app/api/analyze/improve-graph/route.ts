@@ -87,6 +87,71 @@ function edgesToBreakCycles(cycles: string[][]): Array<{source:string; target:st
   return out;
 }
 
+function detectCyclesFromEdgeLikes(edges: Array<{source:string; target:string}>): string[][] {
+  return detectCycles(edges); // reuse existing logic
+}
+
+// Prefer removing "provider-param" edges first if we know original types; otherwise default
+function chooseEdgeToBreak(cycleNodes: string[], edgeTypeLookup: (s:string,t:string)=>string|undefined) {
+  // cycleNodes looks like [n0, n1, ..., nk, n0]
+  let candidate: {source:string; target:string} | null = null;
+  for (let i = 0; i < cycleNodes.length - 1; i++) {
+    const s = cycleNodes[i], t = cycleNodes[i+1];
+    const kind = edgeTypeLookup(s, t);
+    if (kind === "provider-param") {
+      return { source: s, target: t }; // best to break
+    }
+    if (!candidate) candidate = { source: s, target: t }; // fallback to first
+  }
+  return candidate!;
+}
+
+function buildEdgeTypeLookup(original: Array<{source:string; target:string; type:string}>) {
+  const map = new Map<string,string>();
+  for (const e of original) map.set(`${e.source}->${e.target}`, e.type);
+  return (s:string,t:string) => map.get(`${s}->${t}`);
+}
+
+// Enforce acyclicity by iteratively removing one edge per detected cycle
+function enforceAcyclic(
+  merged: Array<{source:string; target:string; type:string}>,
+  originalTypeLookup: (s:string,t:string)=>string|undefined
+): { edges: Array<{source:string; target:string; type:string}>, removes: Array<{source:string; target:string; type:"remove"}> } {
+  const out = [...merged];
+  const removes: Array<{source:string; target:string; type:"remove"}> = [];
+  // Build an index for quick edge lookup/removal
+  const idx = new Map<string, number>();
+  const rebuildIndex = () => {
+    idx.clear();
+    out.forEach((e, i) => idx.set(`${e.source}->${e.target}`, i));
+  };
+  rebuildIndex();
+
+  // loop: detect cycles and break them
+  for (let guard = 0; guard < 100; guard++) {
+    const cycles = detectCyclesFromEdgeLikes(out);
+    if (cycles.length === 0) break;
+
+    // choose one edge per cycle to remove
+    let removedAny = false;
+    for (const cyc of cycles) {
+      if (cyc.length < 2) continue;
+      const pick = chooseEdgeToBreak(cyc, originalTypeLookup);
+      const key = `${pick.source}->${pick.target}`;
+      const i = idx.get(key);
+      if (i !== undefined) {
+        out.splice(i, 1);
+        removes.push({ source: pick.source, target: pick.target, type: "remove" });
+        rebuildIndex();
+        removedAny = true;
+      }
+    }
+    if (!removedAny) break;
+  }
+
+  return { edges: out, removes };
+}
+
 function normalizeEdges(edges: Array<{ source: string; target: string; kind: string }>): EdgeLike[] {
   return edges.map(({ source, target, kind }) => ({ source, target, type: kind }));
 }
@@ -460,36 +525,75 @@ Re-read "cycles" and "mustRemove" and return ONLY the JSON object per schema.
           // Apply patch (sanitized) over original normalized edges
           const mergedEdges = applyEdgePatch(originalEdgesNorm, patch, originalNodeIds);
 
+          // Post-merge enforcement: ensure no cycles remain
+          const originalTypeLookup = buildEdgeTypeLookup(originalEdgesNorm);
+          const enforcement = enforceAcyclic(mergedEdges, originalTypeLookup);
+          const enforcedEdges = enforcement.edges;
+
+          if (enforcement.removes.length > 0) {
+            // Append enforced removals to returned patch audit trail
+            const enforcedAsPatch = enforcement.removes.map(r => ({
+              source: r.source,
+              target: r.target,
+              type: "remove" as const,
+              kind: "remove",
+              reason: "post-check break cycles"
+            }));
+            result.improvedEdges = [
+              ...(result.improvedEdges ?? (patch ?? []).map(p => ({
+                source: p.source,
+                target: p.target,
+                type: (p.type === "remove" ? "remove" : "modify") as "add"|"remove"|"modify",
+                kind: p.type,
+                reason: "LLM patch"
+              }))),
+              ...enforcedAsPatch
+            ];
+            result.validation = {
+              ...(result.validation ?? ai.validation ?? {}),
+              notes: ((result.validation?.notes ?? ai.validation?.notes ?? "") + " Post-check removed extra edges to fully break cycles.").trim()
+            };
+          } else {
+            // Also echo the patch as an audit trail when no enforcement needed
+            result.improvedEdges = (patch ?? []).map(p => ({
+              source: p.source,
+              target: p.target,
+              type: (p.type === "remove" ? "remove" : "modify") as "add" | "remove" | "modify",
+              kind: p.type,
+              reason: "LLM patch"
+            }));
+          }
+
           // Augment validation if AI referenced unknown nodes (we ignore them)
           const unknownSources = (patch ?? []).map(p => p.source).filter(id => !originalNodeIds.has(id));
           const unknownTargets = (patch ?? []).map(p => p.target).filter(id => !originalNodeIds.has(id));
           result.validation = {
-            ...(ai.validation ?? {}),
+            ...(result.validation ?? ai.validation ?? {}),
             edgeNodeCheck: {
               unknownSources: Array.from(new Set(unknownSources)),
               unknownTargets: Array.from(new Set(unknownTargets))
             },
             danglingEdges: [],
-            notes: ((ai.validation?.notes ?? "") + ((unknownSources.length || unknownTargets.length) ? " Sanitized edges referencing unknown node IDs." : "")).trim()
+            notes: result.validation?.notes ?? ((ai.validation?.notes ?? "") + ((unknownSources.length || unknownTargets.length) ? " Sanitized edges referencing unknown node IDs." : "")).trim()
           };
 
           result.originalGraph = {
             nodes,
             edges: originalEdgesNorm as unknown as GraphEdge[]
           };
+
+          // Use enforcedEdges as the final improved edges
           result.improvedGraph = {
             nodes, // keep nodes unchanged
-            edges: mergedEdges as unknown as GraphEdge[]
+            edges: enforcedEdges as unknown as GraphEdge[]
           };
 
-          // Also echo the patch as an audit trail
-          result.improvedEdges = (patch ?? []).map(p => ({
-            source: p.source,
-            target: p.target,
-            type: (p.type === "remove" ? "remove" : "modify") as "add" | "remove" | "modify",
-            kind: p.type,
-            reason: "LLM patch"
-          }));
+          // Final guard: if cycles still remain for any reason, fall back to local fix
+          const remaining = detectCyclesFromEdgeLikes((result.improvedGraph!.edges as any[]).map(e => ({ source: e.source, target: e.target })));
+          if (remaining.length > 0) {
+            console.warn("Post-check still found cycles, falling back to local cycle removal");
+            throw new Error("Post-enforcement still cyclic");
+          }
 
           console.log("edges(original/improved):", originalEdgesNorm.length, result.improvedGraph?.edges.length);
           console.log("nodes:", nodes.length);
