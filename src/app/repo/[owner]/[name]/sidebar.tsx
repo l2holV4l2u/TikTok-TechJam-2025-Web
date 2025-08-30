@@ -53,7 +53,7 @@ export function Sidebar({
             {/* Sidebar Content */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
               <div className="flex items-center p-4 border-b border-gray-100 justify-between flex-shrink-0">
-                <TabsList className="border-b border-gray-100 flex-shrink-0 w-80">
+                <TabsList className="border-b border-gray-100 flex-shrink-0 w-90">
                   <TabsTrigger value="files" className="flex-1 text-sm">
                     Files
                   </TabsTrigger>
@@ -88,7 +88,7 @@ export function Sidebar({
                 <AnalysisTab />
               </TabsContent>
               <TabsContent value="ai" className="flex-1 min-h-0">
-                <AITab 
+                <AITab
                   owner={owner}
                   name={name}
                   graph={graph}

@@ -43,18 +43,15 @@ function createNodeFromData(node: GraphNode, index: number) {
     position: { x: 0, y: 0 },
     data: {
       label: (
-        <div className="flex flex-col items-center justify-center p-3 min-w-[120px]">
+        <div className="flex flex-col items-center justify-center p-3">
           <div
             className={`rounded-sm bg-gradient-to-br ${
               colors[index % colors.length]
-            } flex items-center justify-center mb-2 shadow-lg p-1`}
+            } flex items-center justify-center shadow-lg p-1`}
           >
-            <div className="text-white font-bold text-sm">
+            <div className="text-white font-bold line-clamp-3 break-words w-24 h-16 items-center justify-center">
               {getNodeLabel(node.id)}
             </div>
-          </div>
-          <div className="text-sm font-medium text-gray-700 text-center leading-tight">
-            {node.kind}
           </div>
         </div>
       ),
@@ -75,13 +72,14 @@ function createNodeFromData(node: GraphNode, index: number) {
   };
 }
 
-export const ImprovedDependencyGraph: React.FC<ImprovedDependencyGraphProps> = ({
-  nodes: inputNodes,
-  edges: inputEdges,
-  className,
-}) => {
-  const analysis = useMemo(() => analyzeGraph(inputNodes, inputEdges), [inputNodes, inputEdges]);
-  
+export const ImprovedDependencyGraph: React.FC<
+  ImprovedDependencyGraphProps
+> = ({ nodes: inputNodes, edges: inputEdges, className }) => {
+  const analysis = useMemo(
+    () => analyzeGraph(inputNodes, inputEdges),
+    [inputNodes, inputEdges]
+  );
+
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const n = inputNodes.map(createNodeFromData);
     const e = inputEdges.map(createEdgeFromData);
@@ -160,12 +158,7 @@ export const ImprovedDependencyGraph: React.FC<ImprovedDependencyGraphProps> = (
 
       return { ...node, style: { ...node.style, ...extra } };
     });
-  }, [
-    nodes,
-    selectedNode,
-    adjacency,
-    analysis,
-  ]);
+  }, [nodes, selectedNode, adjacency, analysis]);
 
   const styledEdges = useMemo(() => {
     return edges.map((edge) => {
@@ -177,7 +170,9 @@ export const ImprovedDependencyGraph: React.FC<ImprovedDependencyGraphProps> = (
         selectedNode &&
         edge.source === selectedNode &&
         adjacency.childrenMap.get(selectedNode)?.has(edge.target);
-      const isInCycle = analysis.cycles.cycleEdges.has(`${edge.source}-${edge.target}`);
+      const isInCycle = analysis.cycles.cycleEdges.has(
+        `${edge.source}-${edge.target}`
+      );
 
       let style = { ...edge.style };
 
@@ -212,7 +207,11 @@ export const ImprovedDependencyGraph: React.FC<ImprovedDependencyGraphProps> = (
   }, [edges, selectedNode, adjacency, analysis]);
 
   return (
-    <div className={`w-full h-full bg-gradient-to-br from-slate-50 to-blue-50 relative ${className || ''}`}>
+    <div
+      className={`w-full h-full bg-gradient-to-br from-slate-50 to-blue-50 relative ${
+        className || ""
+      }`}
+    >
       <ReactFlow
         nodes={styledNodes}
         edges={styledEdges}
@@ -232,6 +231,13 @@ export const ImprovedDependencyGraph: React.FC<ImprovedDependencyGraphProps> = (
           size={1}
           style={{ opacity: 0.5 }}
         />
+        <div className="absolute top-4 left-4 z-20">
+          <div className="backdrop-blur-sm border border-green-500 bg-green-100 shadow-lg rounded-lg p-3">
+            <div className="text-xs font-medium text-green-800 ">
+              Improved Graph
+            </div>
+          </div>
+        </div>
         <Controls className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg" />
         <MiniMap
           className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg"
