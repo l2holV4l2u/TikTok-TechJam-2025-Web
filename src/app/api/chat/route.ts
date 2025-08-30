@@ -12,7 +12,7 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPE
 
 export const runtime = "nodejs";
 
-export async function analyzeGraph(input : DependencyGraphProps) {
+export async function analyzeGraph(input : DependencyGraphProps): Promise<DependencyGraphProps> {
   try {
     // Check if OpenAI is properly initialized
     if (!openai || !process.env.OPENAI_API_KEY) {
@@ -22,7 +22,7 @@ export async function analyzeGraph(input : DependencyGraphProps) {
 
     // Minimal guard
     if (!input || typeof input !== "object") {
-      return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+      throw new Error("Invalid input data");
     }
 
     // System prompt – emphasizes SUGGESTIONS as actionable, prioritized bullets
@@ -86,81 +86,49 @@ Tasks:
     try {
       json = JSON.parse(raw);
     } catch {
-      return NextResponse.json({ error: "Model did not return valid JSON." }, { status: 502 });
+      throw new Error("Model did not return valid JSON");
     }
 
     // Optional: tiny shape check
     if (!Array.isArray(json?.suggestions)) {
-      return NextResponse.json({ error: "Missing suggestions array." }, { status: 502 });
+      throw new Error("Missing suggestions array");
     }
 
-    // Transform for existing frontend expectations
-    const transformedResponse = {
-      success: true,
-      graphData: {
-        nodes: (json.fixed?.nodes || json.nodes || []).map((node: any, index: number) => ({
-          id: node.id,
-          type: "default",
-          position: {
-            x: (index % 4) * 200 + 50,
-            y: Math.floor(index / 4) * 150 + 50,
-          },
-          data: {
-            label: node.label || node.id,
-          },
-        })),
-        edges: (json.fixed?.edges || json.edges || []).map((edge: any, index: number) => ({
-          id: `edge-${index}`,
-          source: edge.source,
-          target: edge.target,
-          issue: edge.issue || null,
-        })),
-      },
-      suggestions: json.suggestions || [],
-      issues: json.issues || [],
-      rawChatGPTResponse: json,
+    // Transform for DependencyGraphProps format
+    const dependencyGraph: DependencyGraphProps = {
+      nodes: (json.fixed?.nodes || json.nodes || []).map((node: any) => ({
+        id: node.id,
+        label: node.label || node.id,
+      })),
+      edges: (json.fixed?.edges || json.edges || []).map((edge: any) => ({
+        source: edge.source,
+        target: edge.target,
+      })),
     };
 
-    return NextResponse.json(transformedResponse, { status: 200 });
+    return dependencyGraph;
   } catch (e: any) {
-    // Fallback with sample suggestions
-    const fallbackResponse = {
-      success: true,
-      graphData: {
-        nodes: [
-          {
-            id: "MainActivity",
-            type: "default",
-            position: { x: 50, y: 50 },
-            data: { label: "MainActivity" },
-          },
-          {
-            id: "Another",
-            type: "default",
-            position: { x: 250, y: 50 },
-            data: { label: "Another" },
-          },
-        ],
-        edges: [
-          {
-            id: "edge-1",
-            source: "MainActivity",
-            target: "Another",
-            issue: null,
-          },
-        ],
-      },
-      suggestions: [
-        "Extract shared interfaces to reduce coupling between components",
-        "Remove unused dependencies to improve build performance",
-        "Implement dependency injection for better testability",
-        "Consider splitting large classes into smaller, focused modules",
+    // Fallback with sample data
+    const fallbackGraph: DependencyGraphProps = {
+      nodes: [
+        {
+          id: "MainActivity",
+          label: "MainActivity",
+        },
+        {
+          id: "Another",
+          label: "Another",
+        },
       ],
-      issues: [],
-      error: e?.message ?? "Unknown error",
+      edges: [
+        {
+          source: "MainActivity",
+          target: "Another",
+        },
+      ],
     };
 
-    return NextResponse.json(fallbackResponse, { status: 200 });
+    return fallbackGraph;
   }
 }
 
@@ -168,8 +136,9 @@ Tasks:
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    return await analyzeGraph(body);
-  } catch (error) {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    const result = await analyzeGraph(body);
+    return NextResponse.json(result, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Invalid request body" }, { status: 400 });
   }
 }
