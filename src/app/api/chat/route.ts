@@ -3,12 +3,22 @@ import { DependencyGraphProps } from "@/app/types/graphTypes";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+// Check for API key before initializing OpenAI
+if (!process.env.OPENAI_API_KEY) {
+  console.error("OPENAI_API_KEY environment variable is not set");
+}
+
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
 export const runtime = "nodejs";
 
 export async function analyzeGraph(input : DependencyGraphProps) {
   try {
+    // Check if OpenAI is properly initialized
+    if (!openai || !process.env.OPENAI_API_KEY) {
+      console.error("OpenAI not initialized - API key missing");
+      throw new Error("OpenAI API key not configured");
+    }
 
     // Minimal guard
     if (!input || typeof input !== "object") {
@@ -151,5 +161,15 @@ Tasks:
     };
 
     return NextResponse.json(fallbackResponse, { status: 200 });
+  }
+}
+
+// Add POST handler 
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    return await analyzeGraph(body);
+  } catch (error) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 }
