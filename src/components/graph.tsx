@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  addEdge,
   Background,
-  Connection,
   ConnectionMode,
   Controls,
   MiniMap,
@@ -13,7 +11,7 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import "@xyflow/react/dist/style.css";
 import {
   createEdgeFromData,
@@ -89,11 +87,12 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
   edges: inputEdges,
   className = "",
 }) => {
+  const [layoutDirection, setLayoutDirection] = useState<"TB" | "LR">("TB");
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const n = inputNodes.map(createNodeFromData);
     const e = inputEdges.map(createEdgeFromData);
-    return getLayoutedElements(n, e);
-  }, [inputNodes, inputEdges]);
+    return getLayoutedElements(n, e, layoutDirection);
+  }, [inputNodes, inputEdges, layoutDirection]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -105,6 +104,19 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
   const [selectedAnalysisPanel, setSelectedAnalysisPanel] =
     useState<string>("cycles");
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(true);
+
+  useEffect(() => {
+    const n = inputNodes.map(createNodeFromData);
+    const e = inputEdges.map(createEdgeFromData);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      n,
+      e,
+      layoutDirection
+    );
+
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+  }, [layoutDirection, inputNodes, inputEdges, setNodes, setEdges]);
 
   // Comprehensive graph analysis
   const analysis = useMemo(() => {
@@ -125,11 +137,6 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
 
     return { parentsMap, childrenMap };
   }, [edges]);
-
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
 
   const onNodeClick = useCallback((_e: React.MouseEvent, node: Node) => {
     setSelectedNode((prev) => (prev === node.id ? null : node.id));
@@ -236,7 +243,7 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
       const isInLongestPath =
         showLongestPath &&
         analysis.longestPaths[0]?.path.some(
-          (node, i) =>
+          (_, i) =>
             i < analysis.longestPaths[0].path.length - 1 &&
             analysis.longestPaths[0].path[i] === edge.source &&
             analysis.longestPaths[0].path[i + 1] === edge.target
@@ -566,9 +573,33 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
     <div
       className={`w-full h-full bg-gradient-to-br from-slate-50 to-blue-50 relative ${className}`}
     >
+      {/* Layout Controls */}
+      <div className="absolute top-4 left-4 z-20 flex gap-2 bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg p-2">
+        <button
+          onClick={() => setLayoutDirection("TB")}
+          className={`px-3 py-1 text-xs rounded-md transition-colors ${
+            layoutDirection === "TB"
+              ? "bg-blue-100 text-blue-700 border border-blue-300"
+              : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+          }`}
+        >
+          Vertical
+        </button>
+        <button
+          onClick={() => setLayoutDirection("LR")}
+          className={`px-3 py-1 text-xs rounded-md transition-colors ${
+            layoutDirection === "LR"
+              ? "bg-blue-100 text-blue-700 border border-blue-300"
+              : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+          }`}
+        >
+          Horizontal
+        </button>
+      </div>
+
       {/* Analysis Panel */}
       {showAnalysisPanel && (
-        <div className="absolute top-4 left-4 z-20 max-w-sm">
+        <div className="absolute top-16 left-4 z-20 max-w-sm">
           <div className="bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg">
             {/* Panel Header */}
             <div className="flex items-center justify-between p-3 border-b border-gray-200">
@@ -641,7 +672,6 @@ export const DependencyGraph: React.FC<DependencyGraphProps> = ({
         edges={styledEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
         onNodeClick={onNodeClick}
         connectionMode={ConnectionMode.Loose}
         fitView

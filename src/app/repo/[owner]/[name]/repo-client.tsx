@@ -112,6 +112,18 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
     owner: string,
     repo: string
   ) => {
+    if (fileAnalysisCache.has(fileData.path)) {
+      const cachedAnalysis = fileAnalysisCache.get(fileData.path);
+      setAnalysisResult(cachedAnalysis);
+      if (cachedAnalysis.nodes && cachedAnalysis.edges) {
+        setGraph({
+          nodes: cachedAnalysis.nodes,
+          edges: cachedAnalysis.edges,
+        });
+      }
+      return cachedAnalysis;
+    }
+
     try {
       setLoadingAnalysis(true);
 
@@ -134,8 +146,9 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
 
       const analysis: AnalysisResult = await response.json();
       setAnalysisResult(analysis);
-
-      console.log(analysis);
+      setFileAnalysisCache((prev) =>
+        new Map(prev).set(fileData.path, analysis)
+      );
 
       // Update graph with analysis results
       if (analysis.nodes && analysis.edges) {
@@ -160,6 +173,17 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
 
   // Analyze entire repository
   const analyzeRepository = async () => {
+    if (repoAnalysisCache) {
+      setAnalysisResult(repoAnalysisCache);
+      if (repoAnalysisCache.nodes && repoAnalysisCache.edges) {
+        setGraph({
+          nodes: repoAnalysisCache.nodes,
+          edges: repoAnalysisCache.edges,
+        });
+      }
+      return repoAnalysisCache;
+    }
+
     try {
       setLoadingAnalysis(true);
 
@@ -173,6 +197,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
 
       const analysis = await response.json();
       setAnalysisResult(analysis);
+      setRepoAnalysisCache(analysis);
 
       // Update graph with analysis results
       if (analysis.nodes && analysis.edges) {
@@ -181,8 +206,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           edges: analysis.edges,
         });
       }
-
-      console.log(analysis);
 
       return analysis;
     } catch (err) {
