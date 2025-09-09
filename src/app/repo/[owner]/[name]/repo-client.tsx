@@ -3,6 +3,12 @@
 import { useState, useEffect } from "react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { FileNode } from "@/lib/tree";
 import {
   Github,
@@ -11,6 +17,7 @@ import {
   Network,
   GitCompare,
   ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "@/components/graph";
@@ -234,23 +241,52 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           </div>
 
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={analyzeRepository}
-              disabled={loadingAnalysis}
-            >
-              <Network className="w-4 h-4 mr-2" />
-              {loadingAnalysis ? "Analyzing..." : "Analyze Repository"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={analyzeSelected}
-              disabled={selectedPaths.size === 0}
-            >
-              Analyze Selected ({selectedPaths.size})
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={loadingAnalysis}
+                  className="gap-2"
+                >
+                  <Network className="w-4 h-4" />
+                  {loadingAnalysis ? "Analyzing..." : "Analyze"}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  onClick={analyzeRepository}
+                  disabled={loadingAnalysis}
+                  className="gap-2"
+                >
+                  <Network className="w-4 h-4" />
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">Analyze Repository</span>
+                    <span className="text-xs text-gray-500">
+                      Analyze all Kotlin files in the repository
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={analyzeSelected}
+                  disabled={selectedPaths.size === 0 || loadingAnalysis}
+                  className="gap-2"
+                >
+                  <Network className="w-4 h-4" />
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">
+                      Analyze Selected ({selectedPaths.size})
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {selectedPaths.size === 0
+                        ? "Select files or folders first"
+                        : "Analyze only selected files and folders"}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
