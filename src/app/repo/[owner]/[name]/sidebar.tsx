@@ -19,6 +19,11 @@ export function Sidebar({
   setSelectedPaths,
   graph,
   onShowComparison,
+  improvementResult,
+  showComparison,
+  onViewOriginal,
+  onViewImproved,
+  onToggleComparison,
 }: {
   loading: boolean;
   fileTree: FileNode[];
@@ -28,6 +33,11 @@ export function Sidebar({
   setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
   graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
+  improvementResult?: any;
+  showComparison?: boolean;
+  onViewOriginal?: () => void;
+  onViewImproved?: () => void;
+  onToggleComparison?: (show: boolean) => void;
 } & RepoClientProps) {
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
   const toggleFileTree = () => {
@@ -93,6 +103,11 @@ export function Sidebar({
                   name={name}
                   graph={graph}
                   onShowComparison={onShowComparison}
+                  improvementResult={improvementResult}
+                  showComparison={showComparison}
+                  onViewOriginal={onViewOriginal}
+                  onViewImproved={onViewImproved}
+                  onToggleComparison={onToggleComparison}
                 />
               </TabsContent>
             </div>

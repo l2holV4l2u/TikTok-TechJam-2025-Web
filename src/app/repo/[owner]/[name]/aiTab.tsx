@@ -14,7 +14,9 @@ import {
   TrendingUp, 
   AlertCircle,
   CheckCircle,
-  Eye
+  Eye,
+  ArrowLeft,
+  GitCompare
 } from "lucide-react";
 import { useAtomValue } from "jotai";
 import { inputNodesAtom, inputEdgesAtom } from "@/lib/graphAtom";
@@ -22,13 +24,31 @@ import { inputNodesAtom, inputEdgesAtom } from "@/lib/graphAtom";
 interface AITabProps extends RepoClientProps {
   graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
+  improvementResult?: any;
+  showComparison?: boolean;
+  onViewOriginal?: () => void;
+  onViewImproved?: () => void;
+  onToggleComparison?: (show: boolean) => void;
 }
 
-export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
+export function AITab({ 
+  owner, 
+  name, 
+  graph, 
+  onShowComparison,
+  improvementResult: externalImprovementResult,
+  showComparison,
+  onViewOriginal,
+  onViewImproved,
+  onToggleComparison
+}: AITabProps) {
   const [loadingImprovement, setLoadingImprovement] = useState(false);
   const [improvementResult, setImprovementResult] = useState<any>(null);
   const inputNodes = useAtomValue(inputNodesAtom);
   const inputEdges = useAtomValue(inputEdgesAtom);
+
+  // Use external improvement result if provided, otherwise use local state
+  const currentImprovementResult = externalImprovementResult || improvementResult;
 
   // Improve dependency graph using ChatGPT 4o.mini
   const improveGraph = async () => {
@@ -62,7 +82,9 @@ export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
       }
 
       const result = await response.json();
-      setImprovementResult(result);
+      if (!externalImprovementResult) {
+        setImprovementResult(result);
+      }
       onShowComparison?.(result);
 
       if (result.status === "ok") {
@@ -89,11 +111,38 @@ export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
     <ScrollArea className="h-full">
       <div className="bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-4">
         {/* Header */}
-        <div className="flex items-center gap-2">
-          <Brain size={24} className="text-purple-600" />
-          <span className="text-lg font-semibold text-gray-800">
-            AI Analysis
-          </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Brain size={24} className="text-purple-600" />
+            <span className="text-lg font-semibold text-gray-800">
+              AI Analysis
+            </span>
+          </div>
+          
+          {/* Navigation Buttons */}
+          {currentImprovementResult && (
+            <div className="flex gap-2">
+              {!showComparison ? (
+                <Button
+                  onClick={() => onToggleComparison?.(true)}
+                  size="sm"
+                  variant="default"
+                >
+                  <GitCompare className="w-4 h-4 mr-2" />
+                  View Comparison
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => onToggleComparison?.(false)}
+                  size="sm"
+                  variant="outline"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Original
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* AI Analysis Actions */}
@@ -145,11 +194,11 @@ export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
         </Card>
 
         {/* AI Results */}
-        {improvementResult && (
+        {currentImprovementResult && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base">
-                {improvementResult.status === "ok" ? (
+                {currentImprovementResult.status === "ok" ? (
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 ) : (
                   <AlertCircle className="w-5 h-5 text-green-600" />
@@ -159,27 +208,27 @@ export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-700 font-medium">{improvementResult.message}</p>
+                <p className="text-sm text-green-700 font-medium">{currentImprovementResult.message}</p>
               </div>
 
-              {improvementResult.improvedGraph && (
+              {currentImprovementResult.improvedGraph && (
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <h4 className="text-sm font-medium text-blue-900 mb-2">Improved Graph Info:</h4>
                   <div className="text-xs text-blue-700 space-y-1">
-                    <div>Nodes: {improvementResult.improvedGraph.nodes?.length || 0}</div>
-                    <div>Edges: {improvementResult.improvedGraph.edges?.length || 0}</div>
+                    <div>Nodes: {currentImprovementResult.improvedGraph.nodes?.length || 0}</div>
+                    <div>Edges: {currentImprovementResult.improvedGraph.edges?.length || 0}</div>
                   </div>
                 </div>
               )}
 
-              {improvementResult.suggestions && improvementResult.suggestions.length > 0 && (
+              {currentImprovementResult.suggestions && currentImprovementResult.suggestions.length > 0 && (
                 <div className="p-3 bg-orange-50 rounded-lg">
                   <h4 className="text-sm font-medium text-orange-900 mb-2 flex items-center gap-2">
                     <Lightbulb className="w-4 h-4" />
                     AI Suggestions:
                   </h4>
                   <ul className="space-y-2 text-xs text-orange-700">
-                    {improvementResult.suggestions.map((suggestion: string, index: number) => (
+                    {currentImprovementResult.suggestions.map((suggestion: string, index: number) => (
                       <li key={index} className="flex items-start gap-2">
                         <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 flex-shrink-0"></span>
                         <span>{suggestion}</span>

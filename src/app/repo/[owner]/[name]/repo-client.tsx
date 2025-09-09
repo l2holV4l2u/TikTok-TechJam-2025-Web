@@ -251,26 +251,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             >
               Analyze Selected ({selectedPaths.size})
             </Button>
-            {improvementResult && !showComparison && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowComparison(true)}
-              >
-                <GitCompare className="w-4 h-4 mr-2" />
-                View Comparison
-              </Button>
-            )}
-            {improvementResult && showComparison && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowComparison(false)}
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Original
-              </Button>
-            )}
           </div>
         </div>
       </header>
@@ -288,6 +268,11 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           setSelectedPaths={setSelectedPaths}
           graph={graph}
           onShowComparison={handleShowComparison}
+          improvementResult={improvementResult}
+          showComparison={showComparison}
+          onViewOriginal={handleViewOriginal}
+          onViewImproved={handleViewImproved}
+          onToggleComparison={(show: boolean) => setShowComparison(show)}
         />
 
         {/* Main Content Area */}
