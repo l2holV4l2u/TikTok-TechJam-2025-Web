@@ -1,5 +1,5 @@
-import { DependencyGraphProps } from "@/app/types/graphTypes";
-import { RepoClientProps } from "@/app/types/repoTypes";
+import { DependencyGraphProps } from "@/types/graphTypes";
+import { RepoClientProps } from "@/types/repoTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileNode } from "@/lib/tree";
 import { ChevronRight, PanelLeft } from "lucide-react";

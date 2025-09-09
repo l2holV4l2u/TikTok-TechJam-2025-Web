@@ -13,15 +13,15 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
-import { DependencyGraph } from "@/components/graph";
-import { GraphComparison } from "@/components/graph-comparison";
-import { DependencyGraphProps } from "@/app/types/graphTypes";
-import { FileTreeResponse, RepoClientProps } from "@/app/types/repoTypes";
+import { DependencyGraph } from "@/components/graph/graph";
+import { GraphComparison } from "@/components/graph/graphComparison";
+import { DependencyGraphProps } from "@/types/graphTypes";
+import { FileTreeResponse, RepoClientProps } from "@/types/repoTypes";
 import { toast } from "sonner";
 import { Sidebar } from "./sidebar";
 import { useSetAtom } from "jotai";
 import { inputEdgesAtom, inputNodesAtom } from "@/lib/graphAtom";
-import { analyzeFile } from "@/app/utils/graphUtils";
+import { analyzeFile } from "@/utils/graphUtils";
 
 export default function RepoClient({ owner, name }: RepoClientProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
@@ -37,16 +37,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const setInputEdges = useSetAtom(inputEdgesAtom);
 
   const analyzeSelected = async () => {
-    if (selectedPaths.size === 0) {
-      toast.message("Select files or folders first");
-      return;
-    }
-
-    console.log(
-      "analyzeSelected called with paths:",
-      Array.from(selectedPaths)
-    );
-
     try {
       setLoadingAnalysis(true);
       const analysis = await analyzeFile(owner, name, selectedPaths);
@@ -86,24 +76,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const handleShowComparison = (result: any) => {
     setImprovementResult(result);
     setShowComparison(true);
-  };
-
-  // Navigation functions for graph views
-  const handleViewOriginal = () => {
-    setShowComparison(false);
-    // Graph is already set to original from the analysis
-  };
-
-  const handleViewImproved = () => {
-    if (improvementResult?.improvedGraph) {
-      setGraph({
-        nodes: improvementResult.improvedGraph.nodes,
-        edges: improvementResult.improvedGraph.edges,
-      });
-      setInputNodes(improvementResult.improvedGraph.nodes);
-      setInputEdges(improvementResult.improvedGraph.edges);
-      setShowComparison(false);
-    }
   };
 
   const fetchFileTree = async () => {
@@ -300,11 +272,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                   <GraphComparison
                     status={improvementResult.status}
                     message={improvementResult.message}
-                    originalGraph={improvementResult.originalGraph}
                     improvedGraph={improvementResult.improvedGraph}
                     suggestions={improvementResult.suggestions}
-                    onViewOriginal={handleViewOriginal}
-                    onViewImproved={handleViewImproved}
                   />
                 </div>
               </div>

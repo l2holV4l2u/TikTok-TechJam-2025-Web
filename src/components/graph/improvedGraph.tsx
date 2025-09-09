@@ -17,9 +17,9 @@ import {
   createEdgeFromData,
   getLayoutedElements,
   getNodeLabel,
-} from "../app/utils/graphUtils";
-import { GraphNode, GraphEdge } from "../app/types/graphTypes";
-import { analyzeGraph } from "@/app/utils/graphAnalysis";
+} from "../../utils/graphUtils";
+import { GraphNode, GraphEdge } from "../../types/graphTypes";
+import { analyzeGraph } from "@/utils/graphAnalysis";
 
 interface ImprovedDependencyGraphProps {
   nodes: GraphNode[];

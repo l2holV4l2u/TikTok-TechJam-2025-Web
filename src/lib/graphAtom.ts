@@ -1,5 +1,5 @@
-import { GraphEdge, GraphNode } from "@/app/types/graphTypes";
-import { analyzeGraph } from "@/app/utils/graphAnalysis";
+import { GraphEdge, GraphNode } from "@/types/graphTypes";
+import { analyzeGraph } from "@/utils/graphAnalysis";
 import { atom } from "jotai";
 
 // Atoms for toggles

@@ -1,20 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { DependencyGraphProps } from "@/app/types/graphTypes";
-import { RepoClientProps } from "@/app/types/repoTypes";
+import { DependencyGraphProps } from "@/types/graphTypes";
+import { RepoClientProps } from "@/types/repoTypes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { 
-  Wand2, 
-  Brain, 
-  Lightbulb, 
-  TrendingUp, 
+import {
+  Wand2,
+  Brain,
+  Lightbulb,
+  TrendingUp,
   AlertCircle,
   CheckCircle,
-  Eye
+  Eye,
 } from "lucide-react";
 import { useAtomValue } from "jotai";
 import { inputNodesAtom, inputEdgesAtom } from "@/lib/graphAtom";
@@ -107,14 +107,17 @@ export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-gray-600">
-                Use AI to analyze your dependency graph and get suggestions for improvements.
+                Use AI to analyze your dependency graph and get suggestions for
+                improvements.
               </p>
-              
+
               <div className="space-y-3">
                 <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg">
                   <Lightbulb className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
                   <div className="space-y-1">
-                    <h4 className="text-sm font-medium text-purple-900">What AI analyzes:</h4>
+                    <h4 className="text-sm font-medium text-purple-900">
+                      What AI analyzes:
+                    </h4>
                     <ul className="text-xs text-purple-700 space-y-1">
                       <li>• Circular dependencies detection</li>
                       <li>• Unnecessary coupling identification</li>
@@ -131,12 +134,15 @@ export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
                   className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
                 >
                   <Wand2 className="w-4 h-4 mr-2" />
-                  {loadingImprovement ? "AI is analyzing..." : "Improve Graph with AI"}
+                  {loadingImprovement
+                    ? "AI is analyzing..."
+                    : "Improve Graph with AI"}
                 </Button>
 
                 {!graph && (
                   <p className="text-xs text-amber-600 text-center">
-                    Please analyze the repository first to enable AI improvements
+                    Please analyze the repository first to enable AI
+                    improvements
                   </p>
                 )}
               </div>
@@ -159,35 +165,48 @@ export function AITab({ owner, name, graph, onShowComparison }: AITabProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-700 font-medium">{improvementResult.message}</p>
+                <p className="text-sm text-green-700 font-medium">
+                  {improvementResult.message}
+                </p>
               </div>
 
               {improvementResult.improvedGraph && (
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">Improved Graph Info:</h4>
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">
+                    Improved Graph Info:
+                  </h4>
                   <div className="text-xs text-blue-700 space-y-1">
-                    <div>Nodes: {improvementResult.improvedGraph.nodes?.length || 0}</div>
-                    <div>Edges: {improvementResult.improvedGraph.edges?.length || 0}</div>
+                    <div>
+                      Nodes:{" "}
+                      {improvementResult.improvedGraph.nodes?.length || 0}
+                    </div>
+                    <div>
+                      Edges:{" "}
+                      {improvementResult.improvedGraph.edges?.length || 0}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {improvementResult.suggestions && improvementResult.suggestions.length > 0 && (
-                <div className="p-3 bg-orange-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-orange-900 mb-2 flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4" />
-                    AI Suggestions:
-                  </h4>
-                  <ul className="space-y-2 text-xs text-orange-700">
-                    {improvementResult.suggestions.map((suggestion: string, index: number) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>{suggestion}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {improvementResult.suggestions &&
+                improvementResult.suggestions.length > 0 && (
+                  <div className="p-3 bg-orange-50 rounded-lg">
+                    <h4 className="text-sm font-medium text-orange-900 mb-2 flex items-center gap-2">
+                      <Lightbulb className="w-4 h-4" />
+                      AI Suggestions:
+                    </h4>
+                    <ul className="space-y-2 text-xs text-orange-700">
+                      {improvementResult.suggestions.map(
+                        (suggestion: string, index: number) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 flex-shrink-0"></span>
+                            <span>{suggestion}</span>
+                          </li>
+                        )
+                      )}
+                    </ul>
+                  </div>
+                )}
             </CardContent>
           </Card>
         )}

@@ -1,4 +1,4 @@
-import { getNodeLabel } from "@/app/utils/graphUtils";
+import { getNodeLabel } from "@/utils/graphUtils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   analysisAtom,
@@ -19,6 +19,7 @@ import {
   Target,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 
 export function AnalysisTab() {
@@ -33,16 +34,103 @@ export function AnalysisTab() {
     showCriticalNodesAtom
   );
 
+  // Function to clear all other views when activating one
+  const setExclusiveView = (
+    viewToActivate: "cycles" | "heavy" | "longest" | "critical" | "none"
+  ) => {
+    switch (viewToActivate) {
+      case "cycles":
+        setShowCycles(true);
+        setShowHeavyNodes(false);
+        setShowLongestPath(false);
+        setShowCriticalNodes(false);
+        break;
+      case "heavy":
+        setShowCycles(false);
+        setShowHeavyNodes(true);
+        setShowLongestPath(false);
+        setShowCriticalNodes(false);
+        break;
+      case "longest":
+        setShowCycles(false);
+        setShowHeavyNodes(false);
+        setShowLongestPath(true);
+        setShowCriticalNodes(false);
+        break;
+      case "critical":
+        setShowCycles(false);
+        setShowHeavyNodes(false);
+        setShowLongestPath(false);
+        setShowCriticalNodes(true);
+        break;
+      case "none":
+        setShowCycles(false);
+        setShowHeavyNodes(false);
+        setShowLongestPath(false);
+        setShowCriticalNodes(false);
+        break;
+    }
+  };
+
+  const activeView = showCycles
+    ? "cycles"
+    : showHeavyNodes
+    ? "heavy"
+    : showLongestPath
+    ? "longest"
+    : showCriticalNodes
+    ? "critical"
+    : "none";
+
   return (
     <ScrollArea className="h-full">
       <div className="bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-4">
         {/* Header */}
-        <div className="flex items-center gap-2">
-          <TrendingUp size={24} className="text-gray-800" />
-          <span className="text-lg font-semibold text-gray-800">
-            Graph Analysis
-          </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp size={24} className="text-gray-800" />
+            <span className="text-lg font-semibold text-gray-800">
+              Graph Analysis
+            </span>
+          </div>
+
+          {/* Clear All Views Button */}
+          {activeView !== "none" && (
+            <button
+              onClick={() => setExclusiveView("none")}
+              className="px-3 py-1 text-xs rounded-md bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-colors flex items-center gap-1"
+            >
+              <X size={14} />
+              Clear Focus
+            </button>
+          )}
         </div>
+
+        {/* Active View Indicator */}
+        {activeView !== "none" && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-blue-800">
+              <Info size={16} />
+              <span className="font-medium">
+                Focus Mode:{" "}
+                {activeView === "cycles"
+                  ? "Cycles"
+                  : activeView === "heavy"
+                  ? "Heavy Nodes"
+                  : activeView === "longest"
+                  ? "Longest Path"
+                  : activeView === "critical"
+                  ? "Critical Nodes"
+                  : ""}{" "}
+                Active
+              </span>
+            </div>
+            <p className="text-xs text-blue-600 mt-1">
+              Unrelated nodes are faded. Click "Clear Focus" to see all nodes
+              normally.
+            </p>
+          </div>
+        )}
 
         {/* Overview */}
         <div className="space-y-2">
@@ -97,22 +185,31 @@ export function AnalysisTab() {
         </div>
 
         {/* Cycles Panel */}
-        <div className="space-y-2">
+        <div
+          className={`space-y-2 transition-all duration-200 ${
+            activeView !== "none" && activeView !== "cycles" ? "opacity-50" : ""
+          }`}
+        >
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <AlertTriangle size={16} className="text-red-800" />
               <span className="font-semibold text-red-800">Cycles</span>
+              {activeView === "cycles" && (
+                <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                  Active
+                </span>
+              )}
             </div>
             {analysis.cycles.cycles.length > 0 && (
               <button
-                onClick={() => setShowCycles(!showCycles)}
+                onClick={() => setExclusiveView(showCycles ? "none" : "cycles")}
                 className={`px-2 py-1 text-xs rounded-md transition-colors ${
                   showCycles
                     ? "bg-red-100 text-red-800 border border-red-300"
                     : "bg-gray-100 text-gray-800 border border-gray-300"
                 }`}
               >
-                {showCycles ? "Hide Cycles" : "Highlight Cycles"}
+                {showCycles ? "Hide Cycles" : "Focus Cycles"}
               </button>
             )}
           </div>
@@ -138,21 +235,32 @@ export function AnalysisTab() {
         </div>
 
         {/* Heavy Nodes Panel */}
-        <div className="space-y-2">
+        <div
+          className={`space-y-2 transition-all duration-200 ${
+            activeView !== "none" && activeView !== "heavy" ? "opacity-50" : ""
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users size={16} className="text-purple-800" />
               <span className="font-semibold text-purple-800">Heavy Nodes</span>
+              {activeView === "heavy" && (
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                  Active
+                </span>
+              )}
             </div>
             <button
-              onClick={() => setShowHeavyNodes(!showHeavyNodes)}
+              onClick={() =>
+                setExclusiveView(showHeavyNodes ? "none" : "heavy")
+              }
               className={`px-2 py-1 text-xs rounded-md transition-colors ${
                 showHeavyNodes
                   ? "bg-purple-100 text-purple-700 border border-purple-300"
                   : "bg-gray-100 text-gray-700 border border-gray-300"
               }`}
             >
-              {showHeavyNodes ? "Hide Heavy Nodes" : "Highlight Heavy Nodes"}
+              {showHeavyNodes ? "Hide Heavy Nodes" : "Focus Heavy Nodes"}
             </button>
           </div>
 
@@ -181,22 +289,35 @@ export function AnalysisTab() {
         </div>
 
         {/* Longest Paths Panel */}
-        <div className="space-y-2">
+        <div
+          className={`space-y-2 transition-all duration-200 ${
+            activeView !== "none" && activeView !== "longest"
+              ? "opacity-50"
+              : ""
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 mb-2">
               <GitBranch size={16} className="text-blue-800" />
               <span className="font-semibold text-blue-800">Longest Paths</span>
+              {activeView === "longest" && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  Active
+                </span>
+              )}
             </div>
 
             <button
-              onClick={() => setShowLongestPath(!showLongestPath)}
+              onClick={() =>
+                setExclusiveView(showLongestPath ? "none" : "longest")
+              }
               className={`px-3 py-1 text-xs rounded-md transition-colors ${
                 showLongestPath
                   ? "bg-blue-100 text-blue-800 border border-blue-300"
                   : "bg-gray-100 text-gray-800 border border-gray-300"
               }`}
             >
-              {showLongestPath ? "Hide Longest Path" : "Highlight Longest Path"}
+              {showLongestPath ? "Hide Longest Path" : "Focus Longest Path"}
             </button>
           </div>
 
@@ -218,17 +339,30 @@ export function AnalysisTab() {
         </div>
 
         {/* Critical Nodes Panel */}
-        <div className="space-y-2">
+        <div
+          className={`space-y-2 transition-all duration-200 ${
+            activeView !== "none" && activeView !== "critical"
+              ? "opacity-50"
+              : ""
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Target size={16} className="text-amber-800" />
               <span className="font-semibold text-amber-800">
                 Critical Nodes
               </span>
+              {activeView === "critical" && (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
+                  Active
+                </span>
+              )}
             </div>
 
             <button
-              onClick={() => setShowCriticalNodes(!showCriticalNodes)}
+              onClick={() =>
+                setExclusiveView(showCriticalNodes ? "none" : "critical")
+              }
               className={`px-3 py-1 text-xs rounded-md transition-colors ${
                 showCriticalNodes
                   ? "bg-amber-100 text-amber-800 border border-amber-300"
@@ -237,7 +371,7 @@ export function AnalysisTab() {
             >
               {showCriticalNodes
                 ? "Hide Critical Nodes"
-                : "Highlight Critical Nodes"}
+                : "Focus Critical Nodes"}
             </button>
           </div>
 
@@ -265,7 +399,11 @@ export function AnalysisTab() {
         </div>
 
         {/* Graph Stats Overlay */}
-        <div className="space-y-2">
+        <div
+          className={`space-y-2 transition-all duration-200 ${
+            activeView !== "none" ? "opacity-50" : ""
+          }`}
+        >
           <div className="flex items-center gap-2 mb-3">
             <Layers size={16} className="text-indigo-800" />
             <span className="font-semibold text-indigo-800">Graph Health</span>

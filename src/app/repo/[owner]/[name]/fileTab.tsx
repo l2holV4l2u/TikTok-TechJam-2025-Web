@@ -1,5 +1,5 @@
-import { DependencyGraphProps } from "@/app/types/graphTypes";
-import { FileContentResponse, RepoClientProps } from "@/app/types/repoTypes";
+import { DependencyGraphProps } from "@/types/graphTypes";
+import { FileContentResponse, RepoClientProps } from "@/types/repoTypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

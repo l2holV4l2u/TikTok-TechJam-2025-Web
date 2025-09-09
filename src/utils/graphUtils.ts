@@ -1,6 +1,6 @@
 import dagre from "@dagrejs/dagre";
 import { Edge, MarkerType, Node, Position } from "@xyflow/react";
-import { GitHubFileResponse, GraphEdge } from "../types/graphTypes";
+import { GitHubFileResponse, GraphEdge } from "@/types/graphTypes";
 import { FileNode } from "@/lib/tree";
 
 // Auto-layout function for hierarchical arrangement

@@ -58,3 +58,25 @@ export type SelectedNode = {
   id: string;
   path: string;
 } | null;
+
+export type AnalysisData = {
+  cycles: {
+    cycleNodes: Set<string>;
+    cycleEdges: Set<string>;
+  };
+  heaviestNodes: Array<{ id: string }>;
+  longestPaths: Array<{ path: string[] }>;
+  criticalNodes: string[];
+};
+
+export type AdjacencyMaps = {
+  parentsMap: Map<string, Set<string>>;
+  childrenMap: Map<string, Set<string>>;
+};
+
+export type AnalysisFlags = {
+  showCycles: boolean;
+  showHeavyNodes: boolean;
+  showLongestPath: boolean;
+  showCriticalNodes: boolean;
+};
