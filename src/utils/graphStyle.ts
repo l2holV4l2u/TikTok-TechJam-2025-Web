@@ -219,7 +219,6 @@ export function getStyledEdges(
         opacity: edgeStyle.opacity,
       },
       markerEnd: { type: "arrowclosed", color: edgeStyle.strokeColor },
-      strokeDasharray: edgeStyle.strokeDasharray,
     };
   });
 }
