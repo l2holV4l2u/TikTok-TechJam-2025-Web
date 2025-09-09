@@ -18,6 +18,8 @@ import {
   GitCompare,
   ExternalLink,
   ChevronDown,
+  FolderGit2,
+  SquareDashedMousePointer,
 } from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "@/components/graph";
@@ -260,7 +262,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                   disabled={loadingAnalysis}
                   className="gap-2"
                 >
-                  <Network className="w-4 h-4" />
+                  <FolderGit2 className="w-4 h-4" />
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Analyze Repository</span>
                     <span className="text-xs text-gray-500">
@@ -273,7 +275,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                   disabled={selectedPaths.size === 0 || loadingAnalysis}
                   className="gap-2"
                 >
-                  <Network className="w-4 h-4" />
+                  <SquareDashedMousePointer className="w-4 h-4" />
                   <div className="flex flex-col items-start">
                     <span className="font-medium">
                       Analyze Selected ({selectedPaths.size})
