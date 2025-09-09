@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Sidebar } from "./sidebar";
 import { useSetAtom } from "jotai";
 import { inputEdgesAtom, inputNodesAtom } from "@/lib/graphAtom";
+import { analyzeFile } from "@/app/utils/graphUtils";
 
 export default function RepoClient({ owner, name }: RepoClientProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
@@ -35,7 +36,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const setInputNodes = useSetAtom(inputNodesAtom);
   const setInputEdges = useSetAtom(inputEdgesAtom);
 
-  // ✅ Analyze only selected paths (folders or files)
   const analyzeSelected = async () => {
     if (selectedPaths.size === 0) {
       toast.message("Select files or folders first");
@@ -49,34 +49,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
 
     try {
       setLoadingAnalysis(true);
-
-      const requestBody = {
-        owner,
-        repo: name,
-        includePaths: Array.from(selectedPaths),
-      };
-
-      console.log("Sending request body:", requestBody);
-
-      const response = await fetch("/api/analyze/github", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(
-          `Selection analysis failed: ${response.statusText} ${errText}`
-        );
-      }
-
-      const analysis = await response.json();
-
-      // console.log("Received analysis result:", analysis);
-      // console.log("Analysis selection info:", analysis.selection);
-      // console.log("Analysis file count:", analysis.repo?.fileCount);
-
+      const analysis = await analyzeFile(owner, name, selectedPaths);
       if (analysis.nodes && analysis.edges) {
         // Convert the analysis types to graph types (same as in FileTab)
         const graphNodes = analysis.nodes.map((node: any) => ({
@@ -87,7 +60,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             (usage: any) => `${usage.file}:${usage.line}`
           ),
         }));
-
         const graphEdges = analysis.edges.map((edge: any) => ({
           source: edge.source,
           target: edge.target,
@@ -101,12 +73,6 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
         setInputNodes(graphNodes);
         setInputEdges(graphEdges);
       }
-
-      // toast.success("Analyzed selection", {
-      //   description: `Selected ${Array.from(selectedPaths).join(', ')} - Found ${analysis.nodes?.length ?? 0} nodes, ${
-      //     analysis.edges?.length ?? 0
-      //   } edges from ${analysis.repo?.fileCount ?? 0} files`,
-      // });
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to analyze selection";
@@ -350,7 +316,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                 </div>
               </div>
             ) : graph ? (
-              <DependencyGraph />
+              <DependencyGraph fileTree={fileTree} owner={owner} repo={name} />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">

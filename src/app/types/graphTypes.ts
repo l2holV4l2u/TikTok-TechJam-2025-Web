@@ -40,3 +40,21 @@ export type GraphAnalysis = {
   rootNodes: string[]; // Nodes with no incoming edges
   maxDepth: number;
 };
+
+export type GitHubFileResponse = {
+  content: string | null;
+  base64Content: string;
+  size: number;
+  path: string;
+  mimeType: string;
+  isBinary: boolean;
+  isText: boolean;
+  sha: string;
+  downloadUrl: string;
+  error?: string;
+};
+
+export type SelectedNode = {
+  id: string;
+  path: string;
+} | null;

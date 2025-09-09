@@ -4,7 +4,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnalysisResult } from "@/lib/analyze-core";
-import { formatBytes } from "@/lib/github";
 import { FileNode } from "@/lib/tree";
 import { ChevronDown, ChevronRight, File, Folder } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
