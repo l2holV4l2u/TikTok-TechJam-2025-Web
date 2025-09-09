@@ -32,6 +32,8 @@ import { Sidebar } from "./sidebar";
 import { useSetAtom } from "jotai";
 import { inputEdgesAtom, inputNodesAtom } from "@/lib/graphAtom";
 import { analyzeFile } from "@/utils/graphUtils";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export default function RepoClient({ owner, name }: RepoClientProps) {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
@@ -348,9 +350,23 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
                     <h3 className="font-medium text-gray-900">{selectedFile}</h3>
                   </div>
                   <div className="flex-1 overflow-auto">
-                    <pre className="p-4 text-sm bg-gray-50 h-full overflow-auto">
-                      <code>{fileContent}</code>
-                    </pre>
+                    <SyntaxHighlighter
+                      style={oneLight}
+                      language="kotlin"
+                      PreTag="div"
+                      className="text-sm h-full"
+                      showLineNumbers={true}
+                      wrapLines={true}
+                      customStyle={{
+                        margin: 0,
+                        padding: '1rem',
+                        background: '#fafafa',
+                        height: '100%',
+                        overflow: 'auto'
+                      }}
+                    >
+                      {fileContent}
+                    </SyntaxHighlighter>
                   </div>
                 </div>
               ) : (

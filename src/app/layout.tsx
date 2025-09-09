@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GitHub Repository Explorer",
+  title: "Dependency Injection Visualizer",
   description:
-    "Explore your GitHub repositories, browse files, and view code with an elegant interface.",
+    "A tool to visualize and analyze dependencies in your projects.",
 };
 
 export default function RootLayout({
