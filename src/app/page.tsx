@@ -104,7 +104,7 @@ export default function Home() {
             Visualize Your
             <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-800 bg-clip-text text-transparent block lg:inline">
               {" "}
-              Kotlin{" "}
+              Knit{" "}
             </span>
             Dependencies
           </h1>
