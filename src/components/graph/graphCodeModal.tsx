@@ -10,6 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 export function CodeModal({
   isOpen,
@@ -59,9 +61,23 @@ export function CodeModal({
               <span className="ml-2">Loading file content...</span>
             </div>
           ) : (
-            <pre className="bg-muted p-4 rounded-lg text-sm overflow-auto">
-              <code>{content}</code>
-            </pre>
+             <SyntaxHighlighter
+              style={oneLight}
+              language="kotlin"
+              PreTag="div"
+              className="text-sm h-full"
+              showLineNumbers={true}
+              wrapLines={true}
+              customStyle={{
+                margin: 0,
+                padding: '1rem',
+                background: '#fafafa',
+                height: '100%',
+                overflow: 'auto'
+              }}
+            >
+              {content}
+            </SyntaxHighlighter>
           )}
         </div>
 
