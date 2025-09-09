@@ -17,6 +17,8 @@ export function Sidebar({
   setLoadingAnalysis,
   selectedPaths,
   setSelectedPaths,
+  isCodeView = false,
+  onFileClick,
   graph,
   onShowComparison,
   improvementResult,
@@ -31,6 +33,8 @@ export function Sidebar({
   setLoadingAnalysis: Dispatch<SetStateAction<boolean>>;
   selectedPaths: Set<string>;
   setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
+  isCodeView?: boolean;
+  onFileClick?: (path: string, sha: string) => void;
   graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
   improvementResult?: any;
@@ -92,6 +96,8 @@ export function Sidebar({
                   setLoadingAnalysis={setLoadingAnalysis}
                   selectedPaths={selectedPaths}
                   setSelectedPaths={setSelectedPaths}
+                  isCodeView={isCodeView}
+                  onFileClick={onFileClick}
                 />
               </TabsContent>
               <TabsContent value="analysis" className="flex-1 min-h-0">

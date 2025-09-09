@@ -20,6 +20,7 @@ import {
   ChevronDown,
   FolderGit2,
   SquareDashedMousePointer,
+  File,
 } from "lucide-react";
 import Link from "next/link";
 import { DependencyGraph } from "@/components/graph/graph";
@@ -41,9 +42,33 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [improvementResult, setImprovementResult] = useState<any>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [isCodeView, setIsCodeView] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string>("");
   const repoFullName = `${owner}/${name}`;
   const setInputNodes = useSetAtom(inputNodesAtom);
   const setInputEdges = useSetAtom(inputEdgesAtom);
+
+  const fetchFileContent = async (path: string, sha: string) => {
+    try {
+      const response = await fetch(
+        `/api/github/file?owner=${owner}&repo=${name}&sha=${sha}&path=${encodeURIComponent(path)}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file content: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setSelectedFile(path);
+      setFileContent(data.content);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch file content";
+      toast.error("Failed to load file", {
+        description: errorMessage,
+      });
+    }
+  };
 
   const analyzeSelected = async () => {
     try {
@@ -214,7 +239,33 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* View Toggle Switch */}
+            <div className="flex items-center gap-2 mr-4">
+              <span className="text-sm text-gray-600">Graph</span>
+              <button
+                onClick={() => {
+                  const newCodeView = !isCodeView;
+                  setIsCodeView(newCodeView);
+                  if (newCodeView) {
+                    // Switching to code view - reset file selection
+                    setSelectedFile(null);
+                    setFileContent("");
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isCodeView ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isCodeView ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-sm text-gray-600">Code</span>
+            </div>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -276,6 +327,8 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
           setLoadingAnalysis={setLoadingAnalysis}
           selectedPaths={selectedPaths}
           setSelectedPaths={setSelectedPaths}
+          isCodeView={isCodeView}
+          onFileClick={fetchFileContent}
           graph={graph}
           onShowComparison={handleShowComparison}
           improvementResult={improvementResult}
@@ -285,51 +338,78 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
 
         {/* Main Content Area */}
         <div className="flex-1 bg-gray-50 min-w-0 flex flex-col">
-          {/* Graph Content */}
+          {/* Content */}
           <div className="flex-1 min-h-0">
-            {showComparison && improvementResult ? (
-              <div className="h-full flex flex-col">
-                <div className="flex-1 p-4 overflow-auto">
-                  <GraphComparison
-                    status={improvementResult.status}
-                    message={improvementResult.message}
-                    improvedGraph={improvementResult.improvedGraph}
-                    suggestions={improvementResult.suggestions}
-                  />
+            {isCodeView ? (
+              // Code View
+              selectedFile && fileContent ? (
+                <div className="h-full flex flex-col">
+                  <div className="bg-white border-b border-gray-200 p-3 flex-shrink-0">
+                    <h3 className="font-medium text-gray-900">{selectedFile}</h3>
+                  </div>
+                  <div className="flex-1 overflow-auto">
+                    <pre className="p-4 text-sm bg-gray-50 h-full overflow-auto">
+                      <code>{fileContent}</code>
+                    </pre>
+                  </div>
                 </div>
-              </div>
-            ) : loadingAnalysis ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Network className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
-                  <p className="text-gray-600">Analyzing dependencies...</p>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">No file selected</p>
+                    <p className="text-sm text-gray-500">
+                      Click on a file in the Files tab to view its content
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : graph ? (
-              <DependencyGraph fileTree={fileTree} owner={owner} repo={name} />
+              )
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">
-                    No dependency analysis yet
-                  </p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Click "Analyze Repository" to see the full dependency graph,
-                    or select files/folders and click "Analyze Selected" for
-                    targeted analysis.
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={analyzeRepository}
-                    disabled={loadingAnalysis}
-                    className="gap-2"
-                  >
-                    <Network className="w-4 h-4" />
-                    Analyze Repository
-                  </Button>
+              // Graph View
+              showComparison && improvementResult ? (
+                <div className="h-full flex flex-col">
+                  <div className="flex-1 p-4 overflow-auto">
+                    <GraphComparison
+                      status={improvementResult.status}
+                      message={improvementResult.message}
+                      improvedGraph={improvementResult.improvedGraph}
+                      suggestions={improvementResult.suggestions}
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : loadingAnalysis ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Network className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
+                    <p className="text-gray-600">Analyzing dependencies...</p>
+                  </div>
+                </div>
+              ) : graph ? (
+                <DependencyGraph fileTree={fileTree} owner={owner} repo={name} />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-4">
+                      No dependency analysis yet
+                    </p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Click "Analyze Repository" to see the full dependency graph,
+                      or select files/folders and click "Analyze Selected" for
+                      targeted analysis.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={analyzeRepository}
+                      disabled={loadingAnalysis}
+                      className="gap-2"
+                    >
+                      <Network className="w-4 h-4" />
+                      Analyze Repository
+                    </Button>
+                  </div>
+                </div>
+              )
             )}
           </div>
         </div>

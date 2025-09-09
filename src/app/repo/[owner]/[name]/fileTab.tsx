@@ -21,6 +21,8 @@ export function FileTab({
   setLoadingAnalysis,
   selectedPaths,
   setSelectedPaths,
+  isCodeView = false,
+  onFileClick,
 }: {
   loading: boolean;
   fileTree: FileNode[];
@@ -28,6 +30,8 @@ export function FileTab({
   setLoadingAnalysis: Dispatch<SetStateAction<boolean>>;
   selectedPaths: Set<string>;
   setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
+  isCodeView?: boolean;
+  onFileClick?: (path: string, sha: string) => void;
 } & RepoClientProps) {
   const [fileAnalysisCache, setFileAnalysisCache] = useState<Map<string, any>>(
     new Map()
@@ -217,7 +221,11 @@ export function FileTab({
             if (node.type === "folder") {
               toggleFolder(node.path);
             } else {
-              fetchFileContent(node.path, node.sha!);
+              if (isCodeView && onFileClick) {
+                onFileClick(node.path, node.sha!);
+              } else {
+                fetchFileContent(node.path, node.sha!);
+              }
             }
           }}
         >
@@ -240,19 +248,22 @@ export function FileTab({
 
           <span className="flex-1 truncate">{node.name}</span>
 
-          {node.type === "folder" ? (
-            <Checkbox
-              checked={getFolderSelectionState(node)}
-              onCheckedChange={(v: CheckedState) => onFolderCheckbox(node, v)}
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            />
-          ) : (
-            <Checkbox
-              checked={getFileChecked(node.path)}
-              disabled={hasSelectedAncestor(node.path)}
-              onCheckedChange={(v: CheckedState) => onFileCheckbox(node, v)}
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-            />
+          {/* Only show checkboxes in graph view */}
+          {!isCodeView && (
+            node.type === "folder" ? (
+              <Checkbox
+                checked={getFolderSelectionState(node)}
+                onCheckedChange={(v: CheckedState) => onFolderCheckbox(node, v)}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              />
+            ) : (
+              <Checkbox
+                checked={getFileChecked(node.path)}
+                disabled={hasSelectedAncestor(node.path)}
+                onCheckedChange={(v: CheckedState) => onFileCheckbox(node, v)}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              />
+            )
           )}
         </div>
 
@@ -337,18 +348,27 @@ export function FileTab({
                 .map((file) => (
                   <div
                     key={file.path}
-                    className="flex items-center gap-2 py-2 px-2 hover:bg-gray-50 text-sm transition-colors min-w-0"
+                    className="flex items-center gap-2 py-2 px-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors min-w-0"
+                    onClick={() => {
+                      if (isCodeView && onFileClick) {
+                        onFileClick(file.path, file.sha!);
+                      } else {
+                        fetchFileContent(file.path, file.sha!);
+                      }
+                    }}
                   >
                     <File className="w-4 h-4 text-gray-500" />
                     <span className="flex-1 truncate">{file.name}</span>
-                    <Checkbox
-                      checked={getFileChecked(file.path)}
-                      disabled={hasSelectedAncestor(file.path)}
-                      onCheckedChange={(v: CheckedState) =>
-                        onFileCheckbox(file, v)
-                      }
-                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    />
+                    {!isCodeView && (
+                      <Checkbox
+                        checked={getFileChecked(file.path)}
+                        disabled={hasSelectedAncestor(file.path)}
+                        onCheckedChange={(v: CheckedState) =>
+                          onFileCheckbox(file, v)
+                        }
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      />
+                    )}
                   </div>
                 ))
             )}
