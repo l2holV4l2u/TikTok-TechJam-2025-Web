@@ -114,7 +114,13 @@ export function FileTab({
             selectedFile == node.path && "bg-gray-100 rounded-md"
           )}
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
-          onClick={() => node.type === "folder" && toggleFolder(node.path)}
+          onClick={() => {
+            if (node.type === "folder") {
+              toggleFolder(node.path);
+            } else if (isCodeView && onFileClick) {
+              onFileClick(node.path, node.sha!);
+            }
+          }}
         >
           {/* Icon + name */}
           {node.type === "folder" ? (

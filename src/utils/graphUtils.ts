@@ -177,6 +177,7 @@ export async function fetchFileContent(
   path: string,
   sha: string
 ) {
+  console.log("HI! FROM FILE FETCH");
   try {
     const response = await fetch(
       `/api/github/file?owner=${owner}&repo=${repoName}&sha=${sha}&path=${encodeURIComponent(

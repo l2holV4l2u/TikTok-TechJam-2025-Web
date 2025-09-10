@@ -1,21 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileNode } from "@/lib/tree";
 import { ChevronRight, PanelLeft } from "lucide-react";
 import { useState } from "react";
 import { FileTab } from "./tab/fileTab";
 import { AnalysisTab } from "./tab/analysisTab";
 import { AITab } from "./tab/aiTab";
-import { useAtom, useAtomValue } from "jotai";
-import {
-  ownerAtom,
-  repoNameAtom,
-  selectedPathsAtom,
-} from "@/lib/atom/repoAtom";
-import { graphAtom } from "@/lib/atom/graphAtom";
 
 export function Sidebar({
   loading,
-  fileTree,
   onFileClick,
   onShowComparison,
   improvementResult,
@@ -23,17 +14,12 @@ export function Sidebar({
   onToggleComparison,
 }: {
   loading: boolean;
-  fileTree: FileNode[];
   onFileClick: (path: string, sha: string) => void;
   onShowComparison?: (result: any) => void;
   improvementResult?: any;
   showComparison?: boolean;
   onToggleComparison?: (show: boolean) => void;
 }) {
-  const owner = useAtomValue(ownerAtom);
-  const repoName = useAtomValue(repoNameAtom);
-  const graph = useAtomValue(graphAtom);
-  const [selectedPaths, setSelectedPaths] = useAtom(selectedPathsAtom);
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
   const toggleFileTree = () => setIsFileTreeCollapsed(!isFileTreeCollapsed);
 

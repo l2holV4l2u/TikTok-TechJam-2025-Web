@@ -84,7 +84,6 @@ export default function RepoClient() {
     <div className="flex flex-1 overflow-hidden">
       <Sidebar
         loading={loadingTree}
-        fileTree={fileTree}
         onFileClick={async (path: string, sha: string) => {
           const data = await fetchFileContent(owner, repoName, path, sha);
           setSelectedFile(path);
