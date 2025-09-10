@@ -159,7 +159,6 @@ export const DependencyGraph = () => {
         return;
       }
 
-      // Use the utility function to find SHA from the nested tree
       const fileSha = findFileSha(fileTree, filePath);
 
       if (!fileSha) {
@@ -239,7 +238,6 @@ export const DependencyGraph = () => {
     const e = inputEdges.map(createEdgeFromData);
     return getLayoutedElements(n, e);
   }, [inputNodes, inputEdges, handleViewCode, handleAnalyzeImpact]);
-
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 

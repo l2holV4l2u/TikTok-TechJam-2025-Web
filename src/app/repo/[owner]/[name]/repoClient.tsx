@@ -13,8 +13,6 @@ import {
   inputEdgesAtom,
   inputNodesAtom,
 } from "@/lib/atom/graphAtom";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   fileContentAtom,
   fileTreeAtom,
@@ -30,6 +28,7 @@ import {
   fetchFileTree,
   filterKotlinFiles,
 } from "@/utils/graphUtils";
+import { CodeView } from "./codeView";
 
 export default function RepoClient() {
   const setInputNodes = useSetAtom(inputNodesAtom);
@@ -97,38 +96,13 @@ export default function RepoClient() {
           {isCodeView ? (
             // Code View
             selectedFile && fileContent ? (
-              <div className="h-full flex flex-col">
-                <div className="bg-white border-b border-gray-200 p-3 flex-shrink-0">
-                  <h3 className="font-medium text-gray-900">{selectedFile}</h3>
-                </div>
-                <div className="flex-1 overflow-auto">
-                  <SyntaxHighlighter
-                    style={oneLight}
-                    language="kotlin"
-                    PreTag="div"
-                    className="text-sm h-full"
-                    showLineNumbers={true}
-                    wrapLines={true}
-                    customStyle={{
-                      margin: 0,
-                      padding: "1rem",
-                      background: "#fafafa",
-                      height: "100%",
-                      overflow: "auto",
-                    }}
-                  >
-                    {fileContent}
-                  </SyntaxHighlighter>
-                </div>
-              </div>
+              <CodeView />
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">No file selected</p>
-                  <p className="text-sm text-gray-500">
-                    Click on a file in the Files tab to view its content
-                  </p>
+              <div className="flex flex-col items-center justify-center h-full gap-2">
+                <File className=" text-gray-400 mx-auto" size={36} />
+                <div className="text-gray-600">No file selected</div>
+                <div className="text-sm text-gray-500">
+                  Click on a file in the Files tab to view its content
                 </div>
               </div>
             )
@@ -145,36 +119,31 @@ export default function RepoClient() {
               </div>
             </div>
           ) : loadingAnalysis ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Network className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
-                <p className="text-gray-600">Analyzing dependencies...</p>
-              </div>
+            <div className="flex flex-col items-center justify-center h-full">
+              <Network className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
+              <p className="text-gray-600">Analyzing dependencies...</p>
             </div>
           ) : graph ? (
             <DependencyGraph />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">No dependency analysis yet</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Click "Analyze Repository" to see the full dependency graph,
-                  or select files/folders and click "Analyze Selected" for
-                  targeted analysis.
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    await analyzeRepositoryHelper();
-                  }}
-                  disabled={loadingAnalysis}
-                  className="gap-2"
-                >
-                  <Network size={16} />
-                  Analyze Repository
-                </Button>
+            <div className="flex flex-col gap-4 items-center justify-center h-full">
+              <Network className="w-12 h-12 text-gray-400 mx-auto" />
+              <div className="text-gray-600">No dependency analysis yet</div>
+              <div className="text-sm text-gray-500">
+                Click "Analyze Repository" to see the full dependency graph, or
+                select files/folders and click "Analyze Selected" for targeted
+                analysis.
               </div>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await analyzeRepositoryHelper();
+                }}
+                disabled={loadingAnalysis}
+              >
+                <Network size={16} />
+                Analyze Repository
+              </Button>
             </div>
           )}
         </div>

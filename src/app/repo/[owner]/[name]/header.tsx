@@ -10,6 +10,8 @@ import {
   Github,
   Network,
   SquareDashedMousePointer,
+  Code,
+  GitBranch,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,7 +51,8 @@ export function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 p-4 w-full">
-      <div className="flex items-center justify-between">
+      <div className="relative flex items-center justify-between">
+        {/* Left side */}
         <div className="flex gap-4">
           <Button variant="outline" size="sm" asChild>
             <Link href="/dashboard">
@@ -71,32 +74,44 @@ export function Header() {
           </div>
         </div>
 
-        <div className="flex gap-2 items-center">
-          {/* View Toggle Switch */}
-          <div className="flex items-center gap-2 mr-4">
-            <span className="text-sm text-gray-600">Graph</span>
-            <button
-              onClick={() => {
-                const newCodeView = !isCodeView;
-                setIsCodeView(newCodeView);
-                if (newCodeView) {
-                  setSelectedFile(null);
-                  setFileContent("");
-                }
-              }}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isCodeView ? "bg-blue-600" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  isCodeView ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-            <span className="text-sm text-gray-600">Code</span>
-          </div>
+        {/* Center - View Toggle (absolutely positioned) */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-gray-50 rounded-lg p-1 border">
+          <button
+            onClick={() => {
+              if (isCodeView) {
+                setIsCodeView(false);
+                setSelectedFile(null);
+                setFileContent("");
+              }
+            }}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
+              !isCodeView
+                ? "bg-white text-purple-500 shadow-sm border"
+                : "text-gray-600 hover:text-gray-800"
+            }`}
+          >
+            <GitBranch size={16} /> Graph
+          </button>
+          <button
+            onClick={() => {
+              if (!isCodeView) {
+                setIsCodeView(true);
+                setSelectedFile(null);
+                setFileContent("");
+              }
+            }}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-al cursor-pointer ${
+              isCodeView
+                ? "bg-white text-purple-500 shadow-sm border"
+                : "text-gray-600 hover:text-gray-800"
+            }`}
+          >
+            <Code className="w-4 h-4" /> Code
+          </button>
+        </div>
 
+        {/* Right side */}
+        <div className="flex gap-2 items-center">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
