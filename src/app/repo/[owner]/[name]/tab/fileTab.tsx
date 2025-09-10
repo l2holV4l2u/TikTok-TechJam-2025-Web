@@ -23,7 +23,14 @@ import {
   isCodeViewAtom,
   selectedFileAtom,
   selectedPathsAtom,
+  highlightedFileAtom,
 } from "@/lib/atom/repoAtom";
+import {
+  showCriticalNodesAtom,
+  showCyclesAtom,
+  showHeavyNodesAtom,
+  showLongestPathAtom,
+} from "@/lib/atom/graphAtom";
 
 export function FileTab({
   loading,
@@ -39,7 +46,22 @@ export function FileTab({
   const selectedFile = useAtomValue(selectedFileAtom);
   const isCodeView = useAtomValue(isCodeViewAtom);
   const [selectedPaths, setSelectedPaths] = useAtom(selectedPathsAtom);
+  const [highlightedFile, setHighlightedFile] = useAtom(highlightedFileAtom);
   const fileTree = useAtomValue(fileTreeAtom);
+
+  // Analysis state setters
+  const [, setShowCycles] = useAtom(showCyclesAtom);
+  const [, setShowHeavyNodes] = useAtom(showHeavyNodesAtom);
+  const [, setShowLongestPath] = useAtom(showLongestPathAtom);
+  const [, setShowCriticalNodes] = useAtom(showCriticalNodesAtom);
+
+  // Function to clear all analysis states
+  const clearAnalysisStates = () => {
+    setShowCycles(false);
+    setShowHeavyNodes(false);
+    setShowLongestPath(false);
+    setShowCriticalNodes(false);
+  };
 
   const toggleFolder = (path: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -111,7 +133,8 @@ export function FileTab({
         <div
           className={cn(
             "flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors",
-            selectedFile == node.path && "bg-gray-100 rounded-md"
+            selectedFile == node.path && "bg-gray-100 rounded-md",
+            !isCodeView && highlightedFile === node.path && "bg-blue-100 border-l-2 border-blue-500"
           )}
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
           onClick={() => {
@@ -119,6 +142,10 @@ export function FileTab({
               toggleFolder(node.path);
             } else if (isCodeView && onFileClick) {
               onFileClick(node.path, node.sha!);
+            } else if (!isCodeView && node.type === "file") {
+              // Clear analysis states when clicking a file
+              clearAnalysisStates();
+              setHighlightedFile(highlightedFile === node.path ? null : node.path);
             }
           }}
         >
@@ -196,11 +223,16 @@ export function FileTab({
         key={file.path}
         className={cn(
           "flex items-center gap-2 py-2 px-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors min-w-0",
-          selectedFile == file.path && "bg-gray-100 rounded-md"
+          selectedFile == file.path && "bg-gray-100 rounded-md",
+          !isCodeView && highlightedFile === file.path && "bg-blue-100 border-l-2 border-blue-500"
         )}
         onClick={() => {
           if (isCodeView && onFileClick) {
             onFileClick(file.path, file.sha!);
+          } else if (!isCodeView) {
+            // Clear analysis states when clicking a file
+            clearAnalysisStates();
+            setHighlightedFile(highlightedFile === file.path ? null : file.path);
           }
         }}
       >

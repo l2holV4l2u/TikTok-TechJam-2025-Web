@@ -21,6 +21,7 @@ import {
   ownerAtom,
   repoNameAtom,
   selectedFileAtom,
+  highlightedFileAtom,
 } from "@/lib/atom/repoAtom";
 import {
   analyzeRepository,
@@ -42,6 +43,7 @@ export default function RepoClient() {
   const isCodeView = useAtomValue(isCodeViewAtom);
   const [selectedFile, setSelectedFile] = useAtom(selectedFileAtom);
   const [fileContent, setFileContent] = useAtom(fileContentAtom);
+  const setHighlightedFile = useSetAtom(highlightedFileAtom);
   const owner = useAtomValue(ownerAtom);
   const repoName = useAtomValue(repoNameAtom);
 
@@ -73,6 +75,13 @@ export default function RepoClient() {
     };
     initializeRepo();
   }, [owner, repoName]);
+
+  // Clear highlighted file when switching to code view
+  useEffect(() => {
+    if (isCodeView) {
+      setHighlightedFile(null);
+    }
+  }, [isCodeView, setHighlightedFile]);
 
   return (
     <div className="flex flex-1 overflow-hidden">

@@ -36,6 +36,7 @@ function createNodeFromData(node: GraphNode, index: number) {
     type: "default",
     position: { x: 0, y: 0 },
     data: {
+      graphNode: node, // Store the original GraphNode data
       label: (
         <div className="flex flex-col items-center justify-center p-3">
           <div

@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { analysisAtom } from "@/lib/atom/repoAtom";
+import { highlightedFileAtom } from"@/lib/atom/repoAtom";
 
 export function AnalysisTab() {
   const inputNodes = useAtomValue(inputNodesAtom);
@@ -33,6 +34,7 @@ export function AnalysisTab() {
   const [showCriticalNodes, setShowCriticalNodes] = useAtom(
     showCriticalNodesAtom
   );
+  const [highlightedFile, setHighlightedFile] = useAtom(highlightedFileAtom);
 
   // Function to clear all other views when activating one
   const setExclusiveView = (
@@ -44,30 +46,35 @@ export function AnalysisTab() {
         setShowHeavyNodes(false);
         setShowLongestPath(false);
         setShowCriticalNodes(false);
+        setHighlightedFile(null);
         break;
       case "heavy":
         setShowCycles(false);
         setShowHeavyNodes(true);
         setShowLongestPath(false);
         setShowCriticalNodes(false);
+        setHighlightedFile(null);
         break;
       case "longest":
         setShowCycles(false);
         setShowHeavyNodes(false);
         setShowLongestPath(true);
         setShowCriticalNodes(false);
+        setHighlightedFile(null);
         break;
       case "critical":
         setShowCycles(false);
         setShowHeavyNodes(false);
         setShowLongestPath(false);
         setShowCriticalNodes(true);
+        setHighlightedFile(null);
         break;
       case "none":
         setShowCycles(false);
         setShowHeavyNodes(false);
         setShowLongestPath(false);
         setShowCriticalNodes(false);
+        setHighlightedFile(null);
         break;
     }
   };
