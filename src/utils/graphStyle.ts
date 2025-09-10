@@ -11,7 +11,7 @@ export function isNodeInCycle(
   nodeId: string,
   analysis: AnalysisData,
   flags: AnalysisFlags
-): boolean {
+) {
   return flags.showCycles && analysis.cycles.cycleNodes.has(nodeId);
 }
 
@@ -19,7 +19,7 @@ export function isNodeHeavy(
   nodeId: string,
   analysis: AnalysisData,
   flags: AnalysisFlags
-): boolean {
+) {
   return (
     flags.showHeavyNodes &&
     analysis.heaviestNodes.slice(0, 3).some((n) => n.id === nodeId)
@@ -40,7 +40,7 @@ export function isNodeCritical(
   nodeId: string,
   analysis: AnalysisData,
   flags: AnalysisFlags
-): boolean {
+) {
   return (
     flags.showCriticalNodes &&
     analysis.criticalNodes.slice(0, 3).includes(nodeId)
@@ -51,7 +51,7 @@ export function isParentNode(
   nodeId: string,
   selectedNode: SelectedNode,
   adjacency: AdjacencyMaps
-): boolean {
+) {
   return selectedNode
     ? adjacency.parentsMap.get(selectedNode.id)?.has(nodeId) || false
     : false;
@@ -61,13 +61,13 @@ export function isChildNode(
   nodeId: string,
   selectedNode: SelectedNode,
   adjacency: AdjacencyMaps
-): boolean {
+) {
   return selectedNode
     ? adjacency.childrenMap.get(selectedNode.id)?.has(nodeId) || false
     : false;
 }
 
-export function hasActiveAnalysisView(flags: AnalysisFlags): boolean {
+export function hasActiveAnalysisView(flags: AnalysisFlags) {
   return (
     flags.showCycles ||
     flags.showHeavyNodes ||
@@ -131,7 +131,7 @@ function isParentEdge(
   edge: Edge,
   selectedNode: SelectedNode,
   adjacency: AdjacencyMaps
-): boolean {
+) {
   return selectedNode
     ? edge.target === selectedNode.id &&
         (adjacency.parentsMap.get(selectedNode.id)?.has(edge.source) || false)
@@ -142,7 +142,7 @@ function isChildEdge(
   edge: Edge,
   selectedNode: SelectedNode,
   adjacency: AdjacencyMaps
-): boolean {
+) {
   return selectedNode
     ? edge.source === selectedNode.id &&
         (adjacency.childrenMap.get(selectedNode.id)?.has(edge.target) || false)
@@ -153,7 +153,7 @@ function isEdgeInCycle(
   edge: Edge,
   analysis: AnalysisData,
   flags: AnalysisFlags
-): boolean {
+) {
   return (
     flags.showCycles &&
     analysis.cycles.cycleEdges.has(`${edge.source}-${edge.target}`)
@@ -164,7 +164,7 @@ function isEdgeInLongestPath(
   edge: Edge,
   analysis: AnalysisData,
   flags: AnalysisFlags
-): boolean {
+) {
   return (
     flags.showLongestPath &&
     analysis.longestPaths[0]?.path.some(
@@ -229,7 +229,7 @@ export function getMiniMapNodeColor(
   adjacency: AdjacencyMaps,
   analysis: AnalysisData,
   flags: AnalysisFlags
-): string {
+) {
   if (flags.showCycles && analysis.cycles.cycleNodes.has(node.id))
     return "#ef4444";
   if (

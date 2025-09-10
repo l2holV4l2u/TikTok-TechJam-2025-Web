@@ -21,12 +21,6 @@ import {
 import { GraphNode, GraphEdge } from "../../types/graphTypes";
 import { analyzeGraph } from "@/utils/graphAnalysis";
 
-interface ImprovedDependencyGraphProps {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  className?: string;
-}
-
 function createNodeFromData(node: GraphNode, index: number) {
   const colors = [
     "from-purple-500 to-indigo-600",
@@ -72,9 +66,11 @@ function createNodeFromData(node: GraphNode, index: number) {
   };
 }
 
-export const ImprovedDependencyGraph: React.FC<
-  ImprovedDependencyGraphProps
-> = ({ nodes: inputNodes, edges: inputEdges, className }) => {
+export const ImprovedDependencyGraph: React.FC<{
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  className?: string;
+}> = ({ nodes: inputNodes, edges: inputEdges, className }) => {
   const analysis = useMemo(
     () => analyzeGraph(inputNodes, inputEdges),
     [inputNodes, inputEdges]

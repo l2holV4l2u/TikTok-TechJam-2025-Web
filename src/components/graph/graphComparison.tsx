@@ -6,7 +6,7 @@ import { GraphNode, GraphEdge } from "@/types/graphTypes";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { CheckCircle } from "lucide-react";
 
-interface GraphComparisonProps {
+export const GraphComparison: React.FC<{
   status: "ok" | "improved";
   message: string;
   improvedGraph?: {
@@ -14,14 +14,7 @@ interface GraphComparisonProps {
     edges: GraphEdge[];
   };
   suggestions?: string[];
-}
-
-export const GraphComparison: React.FC<GraphComparisonProps> = ({
-  status,
-  message,
-  improvedGraph,
-  suggestions = [],
-}) => {
+}> = ({ status, message, improvedGraph, suggestions = [] }) => {
   if (status === "ok") {
     return (
       <Card className="w-full">

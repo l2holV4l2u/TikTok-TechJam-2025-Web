@@ -1,18 +1,16 @@
-import React from "react";
+import {
+  showCriticalNodesAtom,
+  showCyclesAtom,
+  showHeavyNodesAtom,
+  showLongestPathAtom,
+} from "@/lib/atom/graphAtom";
+import { useAtomValue } from "jotai";
 
-interface GraphLegendProps {
-  showCycles: boolean;
-  showHeavyNodes: boolean;
-  showLongestPath: boolean;
-  showCriticalNodes: boolean;
-}
-
-export const GraphLegend: React.FC<GraphLegendProps> = ({
-  showCycles,
-  showHeavyNodes,
-  showLongestPath,
-  showCriticalNodes,
-}) => {
+export function GraphLegend() {
+  const showCycles = useAtomValue(showCyclesAtom);
+  const showHeavyNodes = useAtomValue(showHeavyNodesAtom);
+  const showLongestPath = useAtomValue(showLongestPathAtom);
+  const showCriticalNodes = useAtomValue(showCriticalNodesAtom);
   return (
     <div className="absolute top-4 left-4 z-20">
       <div className="bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg p-3">
@@ -58,4 +56,4 @@ export const GraphLegend: React.FC<GraphLegendProps> = ({
       </div>
     </div>
   );
-};
+}

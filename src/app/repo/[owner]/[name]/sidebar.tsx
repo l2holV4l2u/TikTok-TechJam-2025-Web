@@ -4,43 +4,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileNode } from "@/lib/tree";
 import { ChevronRight, PanelLeft } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
-import { FileTab } from "./fileTab";
-import { AnalysisTab } from "./analysisTab";
-import { AITab } from "./aiTab";
+import { FileTab } from "./tab/fileTab";
+import { AnalysisTab } from "./tab/analysisTab";
+import { AITab } from "./tab/aiTab";
 
 export function Sidebar({
   loading,
   fileTree,
   owner,
   name,
-  setGraph,
-  setLoadingAnalysis,
   selectedPaths,
   setSelectedPaths,
-  isCodeView = false,
   onFileClick,
   graph,
   onShowComparison,
   improvementResult,
   showComparison,
-  onViewOriginal,
-  onViewImproved,
   onToggleComparison,
 }: {
   loading: boolean;
   fileTree: FileNode[];
-  setGraph: Dispatch<SetStateAction<DependencyGraphProps | null>>;
-  setLoadingAnalysis: Dispatch<SetStateAction<boolean>>;
   selectedPaths: Set<string>;
   setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
-  isCodeView?: boolean;
-  onFileClick?: (path: string, sha: string) => void;
+  onFileClick: (path: string, sha: string) => void;
   graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
   improvementResult?: any;
   showComparison?: boolean;
-  onViewOriginal?: () => void;
-  onViewImproved?: () => void;
   onToggleComparison?: (show: boolean) => void;
 } & RepoClientProps) {
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
@@ -92,11 +82,8 @@ export function Sidebar({
                   fileTree={fileTree}
                   owner={owner}
                   name={name}
-                  setGraph={setGraph}
-                  setLoadingAnalysis={setLoadingAnalysis}
                   selectedPaths={selectedPaths}
                   setSelectedPaths={setSelectedPaths}
-                  isCodeView={isCodeView}
                   onFileClick={onFileClick}
                 />
               </TabsContent>
@@ -111,8 +98,6 @@ export function Sidebar({
                   onShowComparison={onShowComparison}
                   improvementResult={improvementResult}
                   showComparison={showComparison}
-                  onViewOriginal={onViewOriginal}
-                  onViewImproved={onViewImproved}
                   onToggleComparison={onToggleComparison}
                 />
               </TabsContent>

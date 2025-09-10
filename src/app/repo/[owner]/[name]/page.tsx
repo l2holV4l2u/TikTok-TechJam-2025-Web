@@ -1,15 +1,17 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import RepoClient from "./repo-client";
+import RepoClient from "./repoClient";
+import { Header } from "./header";
+import RepoAtomProvider from "./repoProvider";
 
-interface RepoPageProps {
+export default async function RepoPage({
+  params,
+}: {
   params: Promise<{
     owner: string;
     name: string;
   }>;
-}
-
-export default async function RepoPage({ params }: RepoPageProps) {
+}) {
   const session = await auth();
   const resolvedParams = await params;
 
@@ -17,5 +19,10 @@ export default async function RepoPage({ params }: RepoPageProps) {
     redirect("/");
   }
 
-  return <RepoClient owner={resolvedParams.owner} name={resolvedParams.name} />;
+  return (
+    <RepoAtomProvider owner={resolvedParams.owner} name={resolvedParams.name}>
+      <Header />
+      <RepoClient owner={resolvedParams.owner} name={resolvedParams.name} />
+    </RepoAtomProvider>
+  );
 }

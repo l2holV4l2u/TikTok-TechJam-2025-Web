@@ -98,3 +98,12 @@ export const EDGE_STYLES = {
     opacity: 0.15,
   },
 };
+
+export const NODE_COLORS = [
+  "from-purple-500 to-indigo-600",
+  "from-blue-500 to-cyan-600",
+  "from-emerald-500 to-teal-600",
+  "from-orange-500 to-red-600",
+  "from-pink-500 to-rose-600",
+  "from-violet-500 to-purple-600",
+];

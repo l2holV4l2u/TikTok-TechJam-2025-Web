@@ -2,20 +2,19 @@ import dagre from "@dagrejs/dagre";
 import { Edge, MarkerType, Node, Position } from "@xyflow/react";
 import { GitHubFileResponse, GraphEdge } from "@/types/graphTypes";
 import { FileNode } from "@/lib/tree";
+import { toast } from "sonner";
+import { FileTreeResponse } from "@/types/repoTypes";
 
 // Auto-layout function for hierarchical arrangement
 export function getLayoutedElements(
   nodes: Node[],
-  edges: Edge[],
-  direction: "TB" | "LR" = "TB" // top-bottom or left-right
+  edges: Edge[]
 ): { nodes: Node[]; edges: Edge[] } {
   const nodeWidth = 180;
   const nodeHeight = 120;
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-  const isHorizontal = direction === "LR";
-  dagreGraph.setGraph({ rankdir: direction });
+  dagreGraph.setGraph({ rankdir: "TB" });
 
   nodes.forEach((node) => {
     dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
@@ -37,8 +36,8 @@ export function getLayoutedElements(
         x: nodeWithPosition.x - nodeWidth / 2,
         y: nodeWithPosition.y - nodeHeight / 2,
       },
-      targetPosition: isHorizontal ? Position.Left : Position.Top,
-      sourcePosition: isHorizontal ? Position.Right : Position.Bottom,
+      targetPosition: Position.Top,
+      sourcePosition: Position.Bottom,
     };
   });
 
@@ -170,4 +169,110 @@ export function findFileSha(fileTree: FileNode[], filePath: string) {
   }
 
   return searchTree(fileTree);
+}
+
+export async function fetchFileContent(
+  owner: string,
+  repoName: string,
+  path: string,
+  sha: string
+) {
+  try {
+    const response = await fetch(
+      `/api/github/file?owner=${owner}&repo=${repoName}&sha=${sha}&path=${encodeURIComponent(
+        path
+      )}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file content: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Failed to fetch file content";
+    toast.error("Failed to load file", {
+      description: errorMessage,
+    });
+  }
+}
+
+export async function analyzeRepository(owner: string, repoName: string) {
+  try {
+    const response = await fetch(
+      `/api/analyze/github?owner=${owner}&repo=${repoName}`
+    );
+    if (!response.ok) {
+      throw new Error(`Repository analysis failed: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (err) {}
+}
+
+export async function fetchFileTree(owner: string, repoName: string) {
+  try {
+    const response = await fetch(
+      `/api/github/repo-tree?owner=${owner}&repo=${repoName}`
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch repository tree: ${response.statusText}`
+      );
+    }
+    const data: FileTreeResponse = await response.json();
+    return data;
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Failed to fetch repository tree";
+    toast.error("Failed to load repository", {
+      description: errorMessage,
+    });
+  }
+}
+
+export function filterKotlinFiles(nodes: FileNode[]): FileNode[] {
+  return nodes
+    .map((node) => {
+      if (node.type === "folder" && node.children) {
+        const filteredChildren = filterKotlinFiles(node.children);
+        if (filteredChildren.length > 0) {
+          return { ...node, children: filteredChildren };
+        }
+        return null; // exclude empty folders
+      } else if (node.type === "file" && node.name.endsWith(".kt")) {
+        return node; // include Kotlin file
+      }
+      return null; // exclude non-Kotlin files
+    })
+    .filter(Boolean) as FileNode[];
+}
+
+export async function analyzeSelected(
+  owner: string,
+  repoName: string,
+  selectedPaths: Set<string>
+) {
+  try {
+    const analysis = await analyzeFile(owner, repoName, selectedPaths);
+    if (analysis.nodes && analysis.edges) {
+      // Convert the analysis types to graph types (same as in FileTab)
+      const graphNodes = analysis.nodes.map((node: any) => ({
+        id: node.id,
+        kind: node.kind,
+        definedIn: node.definedIn,
+        usedIn: node.usedIn.map((usage: any) => `${usage.file}:${usage.line}`),
+      }));
+      const graphEdges = analysis.edges.map((edge: any) => ({
+        source: edge.source,
+        target: edge.target,
+        type: edge.kind,
+      }));
+      return { graphNodes, graphEdges };
+    }
+  } catch (err) {
+    const msg =
+      err instanceof Error ? err.message : "Failed to analyze selection";
+    toast.error("Graph analysis failed", { description: msg });
+  }
 }

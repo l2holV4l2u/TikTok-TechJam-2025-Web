@@ -22,22 +22,16 @@ import {
   getLayoutedElements,
   getNodeLabel,
 } from "@/utils/graphUtils";
-import {
-  AnalysisData,
-  AnalysisFlags,
-  GraphNode,
-  SelectedNode,
-} from "@/types/graphTypes";
+import { GraphNode, SelectedNode } from "@/types/graphTypes";
 import { useAtomValue } from "jotai";
 import {
-  analysisAtom,
   inputEdgesAtom,
   inputNodesAtom,
   showCriticalNodesAtom,
   showCyclesAtom,
   showHeavyNodesAtom,
   showLongestPathAtom,
-} from "@/lib/graphAtom";
+} from "@/lib/atom/graphAtom";
 import { GraphLegend } from "./graphLegend";
 import { toast } from "sonner";
 import { FileNode } from "@/lib/tree";
@@ -54,6 +48,8 @@ import {
   getStyledEdges,
   getStyledNodes,
 } from "@/utils/graphStyle";
+import { NODE_COLORS } from "@/constant/graph";
+import { analysisAtom } from "@/lib/atom/repoAtom";
 
 function createNodeFromData(
   node: GraphNode,
@@ -61,15 +57,6 @@ function createNodeFromData(
   onViewCode: (nodeId: string) => void,
   onAnalyze: (nodeId: string) => void
 ) {
-  const colors = [
-    "from-purple-500 to-indigo-600",
-    "from-blue-500 to-cyan-600",
-    "from-emerald-500 to-teal-600",
-    "from-orange-500 to-red-600",
-    "from-pink-500 to-rose-600",
-    "from-violet-500 to-purple-600",
-  ];
-
   return {
     id: node.id,
     type: "default",
@@ -80,9 +67,9 @@ function createNodeFromData(
           <ContextMenuTrigger>
             <div className="flex flex-col items-center justify-center p-3">
               <div
-                className={`rounded-sm bg-gradient-to-br ${
-                  colors[index % colors.length]
-                } flex items-center justify-center shadow-lg p-1`}
+                className={`rounded-sm bg-gradient-to-br flex items-center justify-center shadow-lg p-1 ${
+                  NODE_COLORS[index % NODE_COLORS.length]
+                }`}
               >
                 <div className="text-white font-semibold text-sm text-center leading-tight w-30 h-16 p-1 flex items-center justify-center overflow-hidden">
                   <span className="line-clamp-3 break-words">
@@ -144,8 +131,8 @@ export const DependencyGraph = ({
   const inputNodes = useAtomValue(inputNodesAtom);
   const inputEdges = useAtomValue(inputEdgesAtom);
 
-  const showCycles = useAtomValue(showCyclesAtom);
   const analysis = useAtomValue(analysisAtom);
+  const showCycles = useAtomValue(showCyclesAtom);
   const showHeavyNodes = useAtomValue(showHeavyNodesAtom);
   const showLongestPath = useAtomValue(showLongestPathAtom);
   const showCriticalNodes = useAtomValue(showCriticalNodesAtom);
@@ -283,43 +270,27 @@ export const DependencyGraph = ({
   const onNodeClick = useCallback(
     (_e: React.MouseEvent, node: Node) => {
       // Only allow node selection when no analysis view is active
-      if (
-        !showCycles &&
-        !showHeavyNodes &&
-        !showLongestPath &&
-        !showCriticalNodes
-      ) {
-        setSelectedNode((prev) =>
-          prev?.id === node.id
-            ? null
-            : {
-                id: node.id,
-                path:
-                  inputNodes.find((n) => n.id == node.id)?.definedIn?.file ||
-                  "undefined",
-              }
-        );
-      }
+      setSelectedNode((prev) =>
+        prev?.id === node.id
+          ? null
+          : {
+              id: node.id,
+              path:
+                inputNodes.find((n) => n.id == node.id)?.definedIn?.file ||
+                "undefined",
+            }
+      );
     },
     [inputNodes, showCycles, showHeavyNodes, showLongestPath, showCriticalNodes]
   );
 
   const styledNodes = useMemo(() => {
-    const analysisData: AnalysisData = analysis;
-    const analysisFlags: AnalysisFlags = {
+    return getStyledNodes(nodes, selectedNode, adjacency, analysis, {
       showCycles,
       showHeavyNodes,
       showLongestPath,
       showCriticalNodes,
-    };
-
-    return getStyledNodes(
-      nodes,
-      selectedNode,
-      adjacency,
-      analysisData,
-      analysisFlags
-    );
+    });
   }, [
     nodes,
     selectedNode,
@@ -332,21 +303,12 @@ export const DependencyGraph = ({
   ]);
 
   const styledEdges = useMemo(() => {
-    const analysisData: AnalysisData = analysis;
-    const analysisFlags: AnalysisFlags = {
+    return getStyledEdges(edges, selectedNode, adjacency, analysis, {
       showCycles,
       showHeavyNodes,
       showLongestPath,
       showCriticalNodes,
-    };
-
-    return getStyledEdges(
-      edges,
-      selectedNode,
-      adjacency,
-      analysisData,
-      analysisFlags
-    );
+    });
   }, [
     edges,
     selectedNode,
@@ -373,21 +335,10 @@ export const DependencyGraph = ({
         nodesConnectable={false}
         elementsSelectable
       >
-        <Background
-          color="#e2e8f0"
-          gap={20}
-          size={1}
-          style={{ opacity: 0.5 }}
-        />
-        <Controls className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg" />
-        <GraphLegend
-          showCycles={showCycles}
-          showHeavyNodes={showHeavyNodes}
-          showCriticalNodes={showCriticalNodes}
-          showLongestPath={showLongestPath}
-        />
+        <Background gap={20} size={1} style={{ opacity: 0.5 }} />
+        <Controls />
+        <GraphLegend />
         <MiniMap
-          className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg"
           nodeColor={(node) =>
             getMiniMapNodeColor(node, selectedNode, adjacency, analysis, {
               showCycles,
@@ -396,11 +347,8 @@ export const DependencyGraph = ({
               showCriticalNodes,
             })
           }
-          maskColor="rgba(255, 255, 255, 0.8)"
         />
       </ReactFlow>
-
-      {/* Code Modal */}
       <CodeModal
         isOpen={codeModal.isOpen}
         onClose={() => setCodeModal((prev) => ({ ...prev, isOpen: false }))}

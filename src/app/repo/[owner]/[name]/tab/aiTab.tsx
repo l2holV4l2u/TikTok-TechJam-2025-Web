@@ -11,23 +11,19 @@ import {
   Wand2,
   Brain,
   Lightbulb,
-  TrendingUp,
   AlertCircle,
   CheckCircle,
-  Eye,
   ArrowLeft,
   GitCompare,
 } from "lucide-react";
 import { useAtomValue } from "jotai";
-import { inputNodesAtom, inputEdgesAtom } from "@/lib/graphAtom";
+import { inputNodesAtom, inputEdgesAtom } from "@/lib/atom/graphAtom";
 
 interface AITabProps extends RepoClientProps {
   graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
   improvementResult?: any;
   showComparison?: boolean;
-  onViewOriginal?: () => void;
-  onViewImproved?: () => void;
   onToggleComparison?: (show: boolean) => void;
 }
 
@@ -38,8 +34,6 @@ export function AITab({
   onShowComparison,
   improvementResult: externalImprovementResult,
   showComparison,
-  onViewOriginal,
-  onViewImproved,
   onToggleComparison,
 }: AITabProps) {
   const [loadingImprovement, setLoadingImprovement] = useState(false);

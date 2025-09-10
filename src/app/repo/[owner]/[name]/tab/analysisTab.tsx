@@ -1,14 +1,13 @@
 import { getNodeLabel } from "@/utils/graphUtils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  analysisAtom,
   inputEdgesAtom,
   inputNodesAtom,
   showCriticalNodesAtom,
   showCyclesAtom,
   showHeavyNodesAtom,
   showLongestPathAtom,
-} from "@/lib/graphAtom";
+} from "@/lib/atom/graphAtom";
 import { useAtom, useAtomValue } from "jotai";
 import {
   AlertTriangle,
@@ -21,6 +20,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { analysisAtom } from "@/lib/atom/repoAtom";
 
 export function AnalysisTab() {
   const inputNodes = useAtomValue(inputNodesAtom);
