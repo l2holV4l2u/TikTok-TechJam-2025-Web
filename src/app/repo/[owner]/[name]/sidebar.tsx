@@ -76,24 +76,13 @@ export function Sidebar({
               </div>
 
               <TabsContent value="files" className="flex-1 min-h-0">
-                <FileTab
-                  loading={loading}
-                  fileTree={fileTree}
-                  owner={owner}
-                  name={repoName}
-                  selectedPaths={selectedPaths}
-                  setSelectedPaths={setSelectedPaths}
-                  onFileClick={onFileClick}
-                />
+                <FileTab loading={loading} onFileClick={onFileClick} />
               </TabsContent>
               <TabsContent value="analysis" className="flex-1 min-h-0">
                 <AnalysisTab />
               </TabsContent>
               <TabsContent value="ai" className="flex-1 min-h-0">
                 <AITab
-                  owner={owner}
-                  name={repoName}
-                  graph={graph}
                   onShowComparison={onShowComparison}
                   improvementResult={improvementResult}
                   showComparison={showComparison}

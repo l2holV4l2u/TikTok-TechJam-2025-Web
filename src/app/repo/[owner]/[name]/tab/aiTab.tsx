@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { DependencyGraphProps } from "@/types/graphTypes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,7 +24,6 @@ export function AITab({
   showComparison,
   onToggleComparison,
 }: {
-  graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
   improvementResult?: any;
   showComparison?: boolean;
