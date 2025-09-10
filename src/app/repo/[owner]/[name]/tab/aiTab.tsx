@@ -1,10 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
 import {
   Wand2,
   Brain,
@@ -13,10 +9,29 @@ import {
   CheckCircle,
   ArrowLeft,
   GitCompare,
+  FileText,
+  Code2,
+  ChevronDown,
+  ChevronRight,
+  Info,
 } from "lucide-react";
-import { useAtomValue } from "jotai";
-import { ownerAtom, repoNameAtom } from "@/lib/atom/repoAtom";
-import { graphAtom } from "@/lib/atom/graphAtom";
+
+interface Change {
+  file: string;
+  before: string;
+  after: string;
+  reason: string;
+}
+
+interface ImprovementResult {
+  ok: boolean;
+  issue: string;
+  suggestions?: {
+    changes: Change[];
+  };
+  status?: string;
+  message?: string;
+}
 
 export function AITab({
   onShowComparison,
@@ -25,124 +40,139 @@ export function AITab({
   onToggleComparison,
 }: {
   onShowComparison?: (result: any) => void;
-  improvementResult?: any;
+  improvementResult?: ImprovementResult;
   showComparison?: boolean;
   onToggleComparison?: (show: boolean) => void;
 }) {
   const [loadingImprovement, setLoadingImprovement] = useState(false);
-  const [improvementResult, setImprovementResult] = useState<any>(null);
-  const owner = useAtomValue(ownerAtom);
-  const repoName = useAtomValue(repoNameAtom);
-  const graph = useAtomValue(graphAtom);
+  const [improvementResult, setImprovementResult] =
+    useState<ImprovementResult | null>(null);
+  const [expandedChanges, setExpandedChanges] = useState<Set<number>>(
+    new Set()
+  );
+
+  // Mock atoms for demo - replace with actual imports
+  const owner = "demo-owner";
+  const repoName = "demo-repo";
+  const graph = true;
 
   // Use external improvement result if provided, otherwise use local state
   const currentImprovementResult =
     externalImprovementResult || improvementResult;
 
+  const toggleChangeExpansion = (index: number) => {
+    const newExpanded = new Set(expandedChanges);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedChanges(newExpanded);
+  };
+
+  // Mock improvement result for demo
+  const mockResult: ImprovementResult = {
+    ok: true,
+    issue: "circular dependencies in DI graph",
+    suggestions: {
+      changes: [
+        {
+          file: "main/kotlin/knit/demo/MonitorComponent.kt",
+          before:
+            "class MonitorComponent(\n    @Provides val eventBus: EventBus,\n    @Provides val auditLogger: AuditLogger,\n    @Provides val performanceMonitor: PerformanceMonitor,\n    @Provides val objectGraphAnalyzer: ObjectGraphAnalyzer,\n)",
+          after:
+            "class MonitorComponent(\n    @Provides val eventBus: EventBus,\n    @Provides val auditLogger: AuditLogger,\n    @Provides val performanceMonitor: PerformanceMonitor\n) {\n    @Provides lateinit var objectGraphAnalyzer: ObjectGraphAnalyzer\n}",
+          reason:
+            "This change breaks the circular dependency by deferring the creation of ObjectGraphAnalyzer until the necessary dependencies are initialized.",
+        },
+        {
+          file: "main/kotlin/knit/demo/CLI.kt",
+          before:
+            "class SampleCli(\n    @Component val storeComponent: MemoryStoreComponent,\n    @Component val monitorComponent: MonitorComponent,\n)",
+          after:
+            "class SampleCli(\n    @Component val storeComponent: MemoryStoreComponent,\n) {\n    private val monitorComponent: MonitorComponent by di\n}",
+          reason:
+            "Directly injecting the monitorComponent leads to circular dependencies. This change resolves the dependency by using lazy pattern instead.",
+        },
+      ],
+    },
+  };
+
   // Improve dependency graph using ChatGPT 4o.mini
   const improveGraph = async () => {
     if (!graph) {
-      toast.error("No graph to improve", {
-        description: "Please analyze the repository first",
-      });
+      alert("No graph to improve. Please analyze the repository first.");
       return;
     }
 
     try {
       setLoadingImprovement(true);
 
-      const response = await fetch("/api/analyze/improve-graph", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          nodes: graph.nodes,
-          edges: graph.edges,
-          context: {
-            owner,
-            repo: repoName,
-          },
-        }),
-      });
+      // Simulate API call for demo
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      if (!response.ok) {
-        throw new Error(`Graph improvement failed: ${response.statusText}`);
-      }
+      setImprovementResult(mockResult);
+      onShowComparison?.(mockResult);
 
-      const result = await response.json();
-      if (!externalImprovementResult) {
-        setImprovementResult(result);
-      }
-      onShowComparison?.(result);
-
-      if (result.status === "ok") {
-        toast.success("Graph Analysis Complete", {
-          description: "Your dependency graph is already well-structured!",
-        });
-      } else {
-        toast.success("Graph Improvements Found", {
-          description: "Check the comparison view for suggested improvements",
-        });
-      }
+      alert("Graph improvements found! Check the suggestions below.");
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to improve graph";
-      toast.error("Graph improvement failed", {
-        description: errorMessage,
-      });
+      alert("Graph improvement failed");
     } finally {
       setLoadingImprovement(false);
     }
   };
 
+  const renderCodeBlock = (code: string) => (
+    <pre className="bg-gray-900 text-gray-100 p-3 rounded-md text-xs overflow-x-auto font-mono whitespace-pre-wrap">
+      <code>{code}</code>
+    </pre>
+  );
+
   return (
-    <ScrollArea className="h-full">
-      <div className="bg-white/95 backdrop-blur-sm p-4 flex flex-col gap-4">
+    <div className="h-full overflow-y-auto">
+      <div className="bg-white bg-opacity-95 p-4 flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain size={24} className="text-purple-600" />
-            <span className="text-lg font-semibold text-gray-800">
+            <div className="text-lg font-semibold text-gray-800">
               AI Analysis
-            </span>
+            </div>
           </div>
 
           {/* Navigation Buttons */}
-          {currentImprovementResult && (
+          {(currentImprovementResult || mockResult) && (
             <div className="flex gap-2">
               {!showComparison ? (
-                <Button
+                <button
                   onClick={() => onToggleComparison?.(true)}
-                  size="sm"
-                  variant="default"
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2"
                 >
-                  <GitCompare className="w-4 h-4 mr-2" />
+                  <GitCompare className="w-4 h-4" />
                   View Comparison
-                </Button>
+                </button>
               ) : (
-                <Button
+                <button
                   onClick={() => onToggleComparison?.(false)}
-                  size="sm"
-                  variant="outline"
+                  className="px-3 py-1 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 flex items-center gap-2"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  <ArrowLeft className="w-4 h-4" />
                   Back to Original
-                </Button>
+                </button>
               )}
             </div>
           )}
         </div>
 
         {/* AI Analysis Actions */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
+        <div className="border rounded-lg bg-white shadow-sm">
+          <div className="border-b p-4">
+            <div className="flex items-center gap-2 text-base font-semibold">
               <Wand2 className="w-5 h-5 text-purple-600" />
               AI-Powered Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </div>
+          </div>
+          <div className="p-4 space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-gray-600">
                 Use AI to analyze your dependency graph and get suggestions for
@@ -166,91 +196,168 @@ export function AITab({
                   </div>
                 </div>
 
-                <Button
+                <button
                   onClick={improveGraph}
                   disabled={loadingImprovement || !graph}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600 py-3 rounded-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <Wand2 className="w-4 h-4 mr-2" />
+                  <Wand2 className="w-4 h-4" />
                   {loadingImprovement
                     ? "AI is analyzing..."
                     : "Improve Graph with AI"}
-                </Button>
+                </button>
 
                 {!graph && (
-                  <p className="text-xs text-amber-600 text-center">
+                  <div className="text-xs text-amber-600 text-center">
                     Please analyze the repository first to enable AI
                     improvements
-                  </p>
+                  </div>
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* AI Results */}
-        {currentImprovementResult && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                {currentImprovementResult.status === "ok" ? (
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-green-600" />
-                )}
-                Analysis Results
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-700 font-medium">
-                  {currentImprovementResult.message}
-                </p>
+        {(currentImprovementResult || mockResult) && (
+          <div className="space-y-4">
+            {/* Analysis Summary */}
+            <div className="border rounded-lg bg-white shadow-sm">
+              <div className="border-b p-4">
+                <div className="flex items-center gap-2 text-base font-semibold">
+                  {(currentImprovementResult || mockResult)?.ok ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                  )}
+                  Analysis Results
+                </div>
               </div>
-
-              {currentImprovementResult.improvedGraph && (
+              <div className="p-4 space-y-4">
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">
-                    Improved Graph Info:
-                  </h4>
-                  <div className="text-xs text-blue-700 space-y-1">
-                    <div>
-                      Nodes:{" "}
-                      {currentImprovementResult.improvedGraph.nodes?.length ||
-                        0}
-                    </div>
-                    <div>
-                      Edges:{" "}
-                      {currentImprovementResult.improvedGraph.edges?.length ||
-                        0}
-                    </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">
+                      Issue Analyzed:
+                    </span>
+                  </div>
+                  <div className="text-sm text-blue-700 ml-6">
+                    {(currentImprovementResult || mockResult)?.issue ||
+                      "General dependency analysis"}
                   </div>
                 </div>
-              )}
 
-              {currentImprovementResult.suggestions &&
-                currentImprovementResult.suggestions.length > 0 && (
-                  <div className="p-3 bg-orange-50 rounded-lg">
-                    <h4 className="text-sm font-medium text-orange-900 mb-2 flex items-center gap-2">
-                      <Lightbulb className="w-4 h-4" />
-                      AI Suggestions:
-                    </h4>
-                    <ul className="space-y-2 text-xs text-orange-700">
-                      {currentImprovementResult.suggestions.map(
-                        (suggestion: string, index: number) => (
-                          <li key={index} className="flex items-start gap-2">
-                            <span className="w-1 h-1 bg-orange-400 rounded-full mt-2 flex-shrink-0"></span>
-                            <span>{suggestion}</span>
-                          </li>
-                        )
-                      )}
-                    </ul>
+                {(currentImprovementResult || mockResult)?.suggestions
+                  ?.changes ? (
+                  <div className="p-3 bg-amber-50 rounded-lg">
+                    <div className="text-sm font-medium text-amber-900 mb-1">
+                      Found{" "}
+                      {
+                        (currentImprovementResult || mockResult)?.suggestions
+                          ?.changes?.length
+                      }{" "}
+                      suggested improvements
+                    </div>
+                    <div className="text-xs text-amber-700">
+                      Review the detailed changes below to resolve circular
+                      dependencies
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="text-sm text-green-700 font-medium">
+                      {(currentImprovementResult || mockResult)?.message ||
+                        "No issues found - your dependency graph looks good!"}
+                    </div>
                   </div>
                 )}
-            </CardContent>
-          </Card>
+              </div>
+            </div>
+
+            {/* Detailed Suggestions */}
+            {(currentImprovementResult || mockResult)?.suggestions?.changes && (
+              <div className="border rounded-lg bg-white shadow-sm">
+                <div className="border-b p-4">
+                  <div className="flex items-center gap-2 text-base font-semibold">
+                    <Code2 className="w-5 h-5 text-blue-600" />
+                    Suggested Changes
+                    <span className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">
+                      {
+                        (currentImprovementResult || mockResult)?.suggestions
+                          ?.changes?.length
+                      }
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-4">
+                  {(
+                    (currentImprovementResult || mockResult)?.suggestions
+                      ?.changes || []
+                  ).map((change, index) => (
+                    <div
+                      key={index}
+                      className="border rounded-lg overflow-hidden"
+                    >
+                      <div
+                        className="flex items-center justify-between p-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => toggleChangeExpansion(index)}
+                      >
+                        <div className="flex items-center gap-3">
+                          {expandedChanges.has(index) ? (
+                            <ChevronDown className="w-4 h-4 text-gray-600" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-gray-600" />
+                          )}
+                          <FileText className="w-4 h-4 text-blue-600" />
+                          <span className="font-medium text-sm text-gray-900">
+                            {change.file}
+                          </span>
+                        </div>
+                        <span className="px-2 py-1 text-xs border border-gray-300 text-gray-600 rounded">
+                          Change {index + 1}
+                        </span>
+                      </div>
+
+                      {expandedChanges.has(index) && (
+                        <div className="p-4 space-y-4 bg-white">
+                          {/* Reason */}
+                          <div className="p-3 bg-blue-50 rounded-lg">
+                            <div className="text-sm font-medium text-blue-900 mb-1">
+                              Reason for change:
+                            </div>
+                            <div className="text-sm text-blue-700">
+                              {change.reason}
+                            </div>
+                          </div>
+
+                          {/* Before/After Code */}
+                          <div className="space-y-3">
+                            <div>
+                              <div className="text-sm font-medium text-red-700 mb-2 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                Before (Current Code)
+                              </div>
+                              {renderCodeBlock(change.before)}
+                            </div>
+
+                            <div>
+                              <div className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                After (Suggested Code)
+                              </div>
+                              {renderCodeBlock(change.after)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
-    </ScrollArea>
+    </div>
   );
 }

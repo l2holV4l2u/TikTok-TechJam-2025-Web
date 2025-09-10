@@ -32,8 +32,10 @@ import {
 } from "@/utils/graphUtils";
 
 export default function RepoClient() {
-  const [fileTree, setFileTree] = useAtom(fileTreeAtom);
-  const [loadingTree, setLoadingTree] = useState(true); // loading tree
+  const setInputNodes = useSetAtom(inputNodesAtom);
+  const setInputEdges = useSetAtom(inputEdgesAtom);
+  const setFileTree = useSetAtom(fileTreeAtom);
+  const [loadingTree, setLoadingTree] = useState(true);
   const [loadingAnalysis, setLoadingAnalysis] = useAtom(loadingAnalysisAtom);
   const [graph, setGraph] = useAtom(graphAtom);
   const [improvementResult, setImprovementResult] = useState<any>(null);
@@ -43,9 +45,6 @@ export default function RepoClient() {
   const [fileContent, setFileContent] = useAtom(fileContentAtom);
   const owner = useAtomValue(ownerAtom);
   const repoName = useAtomValue(repoNameAtom);
-
-  const setInputNodes = useSetAtom(inputNodesAtom);
-  const setInputEdges = useSetAtom(inputEdgesAtom);
 
   // Handle showing comparison from AI tab
   const handleShowComparison = (result: any) => {
@@ -57,12 +56,10 @@ export default function RepoClient() {
     setLoadingAnalysis(true);
     const analysis = await analyzeRepository(owner, repoName);
     if (analysis.nodes && analysis.edges) {
-      setGraph({
-        nodes: analysis.nodes,
-        edges: analysis.edges,
-      });
-      setInputNodes(analysis.nodes);
-      setInputEdges(analysis.edges);
+      const { nodes, edges } = analysis;
+      setGraph({ nodes, edges });
+      setInputNodes(nodes);
+      setInputEdges(edges);
     }
     setLoadingAnalysis(false);
   };
@@ -71,14 +68,12 @@ export default function RepoClient() {
     const initializeRepo = async () => {
       setLoadingTree(true);
       const data = await fetchFileTree(owner, repoName);
-      if (data) {
-        setFileTree(filterKotlinFiles(data.tree));
-      }
+      if (data) setFileTree(filterKotlinFiles(data.tree));
       setLoadingTree(false);
       await analyzeRepositoryHelper();
     };
     initializeRepo();
-  }, [owner, name]);
+  }, [owner, repoName]);
 
   return (
     <div className="flex flex-1 overflow-hidden">

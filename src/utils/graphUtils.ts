@@ -26,8 +26,6 @@ export function getLayoutedElements(
 
   dagre.layout(dagreGraph);
 
-  console.log(nodes);
-
   const layoutedNodes = nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
     return {
@@ -70,7 +68,7 @@ export function createEdgeFromData(edge: GraphEdge) {
   };
 }
 
-export function getNodeLabel(nodeId: string): string {
+export function getNodeLabel(nodeId: string) {
   const parts = nodeId.split(".");
   return parts[parts.length - 1];
 }
@@ -177,7 +175,6 @@ export async function fetchFileContent(
   path: string,
   sha: string
 ) {
-  console.log("HI! FROM FILE FETCH");
   try {
     const response = await fetch(
       `/api/github/file?owner=${owner}&repo=${repoName}&sha=${sha}&path=${encodeURIComponent(
@@ -208,7 +205,13 @@ export async function analyzeRepository(owner: string, repoName: string) {
       throw new Error(`Repository analysis failed: ${response.statusText}`);
     }
     return await response.json();
-  } catch (err) {}
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Failed to analyze repository";
+    toast.error("Failed to analyze repository", {
+      description: errorMessage,
+    });
+  }
 }
 
 export async function fetchFileTree(owner: string, repoName: string) {
