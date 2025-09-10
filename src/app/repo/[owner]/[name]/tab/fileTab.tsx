@@ -1,4 +1,3 @@
-import { RepoClientProps } from "@/types/repoTypes";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,35 +11,35 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { Dispatch, SetStateAction, useState } from "react";
+import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 import type React from "react";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { cn } from "@/lib/utils";
-import { isCodeViewAtom, selectedFileAtom } from "@/lib/atom/repoAtom";
+import {
+  fileTreeAtom,
+  isCodeViewAtom,
+  selectedFileAtom,
+  selectedPathsAtom,
+} from "@/lib/atom/repoAtom";
 
 export function FileTab({
   loading,
-  fileTree,
-  selectedPaths,
-  setSelectedPaths,
   onFileClick,
 }: {
   loading: boolean;
-  fileTree: FileNode[];
-  selectedPaths: Set<string>;
-  setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
   onFileClick: (path: string, sha: string) => void;
-} & RepoClientProps) {
+}) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
   const [searchQuery, setSearchQuery] = useState("");
   const selectedFile = useAtomValue(selectedFileAtom);
   const isCodeView = useAtomValue(isCodeViewAtom);
-  console.log(isCodeView);
+  const [selectedPaths, setSelectedPaths] = useAtom(selectedPathsAtom);
+  const fileTree = useAtomValue(fileTreeAtom);
 
   const toggleFolder = (path: string) => {
     const newExpanded = new Set(expandedFolders);

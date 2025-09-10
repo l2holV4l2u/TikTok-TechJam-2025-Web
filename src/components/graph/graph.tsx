@@ -49,7 +49,12 @@ import {
   getStyledNodes,
 } from "@/utils/graphStyle";
 import { NODE_COLORS } from "@/constant/graph";
-import { analysisAtom } from "@/lib/atom/repoAtom";
+import {
+  analysisAtom,
+  fileTreeAtom,
+  ownerAtom,
+  repoNameAtom,
+} from "@/lib/atom/repoAtom";
 
 function createNodeFromData(
   node: GraphNode,
@@ -119,24 +124,17 @@ function createNodeFromData(
   };
 }
 
-export const DependencyGraph = ({
-  fileTree,
-  owner,
-  repo,
-}: {
-  fileTree: FileNode[];
-  owner: string;
-  repo: string;
-}) => {
+export const DependencyGraph = () => {
   const inputNodes = useAtomValue(inputNodesAtom);
   const inputEdges = useAtomValue(inputEdgesAtom);
-
   const analysis = useAtomValue(analysisAtom);
+  const owner = useAtomValue(ownerAtom);
+  const repoName = useAtomValue(repoNameAtom);
+  const fileTree = useAtomValue(fileTreeAtom);
   const showCycles = useAtomValue(showCyclesAtom);
   const showHeavyNodes = useAtomValue(showHeavyNodesAtom);
   const showLongestPath = useAtomValue(showLongestPathAtom);
   const showCriticalNodes = useAtomValue(showCriticalNodesAtom);
-
   const [selectedNode, setSelectedNode] = useState<SelectedNode>(null);
   const [codeModal, setCodeModal] = useState<{
     isOpen: boolean;
@@ -174,7 +172,7 @@ export const DependencyGraph = ({
       try {
         const fileData = await fetchGitHubFileContent(
           owner,
-          repo,
+          repoName,
           fileSha,
           filePath
         );
@@ -225,7 +223,7 @@ export const DependencyGraph = ({
         }));
       }
     },
-    [inputNodes, fileTree, owner, repo]
+    [inputNodes, fileTree, owner, repoName]
   );
 
   const handleAnalyzeImpact = useCallback((nodeId: string) => {

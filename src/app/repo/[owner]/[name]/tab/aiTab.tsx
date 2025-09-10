@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { DependencyGraphProps } from "@/types/graphTypes";
-import { RepoClientProps } from "@/types/repoTypes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,29 +16,26 @@ import {
   GitCompare,
 } from "lucide-react";
 import { useAtomValue } from "jotai";
-import { inputNodesAtom, inputEdgesAtom } from "@/lib/atom/graphAtom";
+import { ownerAtom, repoNameAtom } from "@/lib/atom/repoAtom";
+import { graphAtom } from "@/lib/atom/graphAtom";
 
-interface AITabProps extends RepoClientProps {
+export function AITab({
+  onShowComparison,
+  improvementResult: externalImprovementResult,
+  showComparison,
+  onToggleComparison,
+}: {
   graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
   improvementResult?: any;
   showComparison?: boolean;
   onToggleComparison?: (show: boolean) => void;
-}
-
-export function AITab({
-  owner,
-  name,
-  graph,
-  onShowComparison,
-  improvementResult: externalImprovementResult,
-  showComparison,
-  onToggleComparison,
-}: AITabProps) {
+}) {
   const [loadingImprovement, setLoadingImprovement] = useState(false);
   const [improvementResult, setImprovementResult] = useState<any>(null);
-  const inputNodes = useAtomValue(inputNodesAtom);
-  const inputEdges = useAtomValue(inputEdgesAtom);
+  const owner = useAtomValue(ownerAtom);
+  const repoName = useAtomValue(repoNameAtom);
+  const graph = useAtomValue(graphAtom);
 
   // Use external improvement result if provided, otherwise use local state
   const currentImprovementResult =
@@ -67,7 +63,7 @@ export function AITab({
           edges: graph.edges,
           context: {
             owner,
-            repo: name,
+            repo: repoName,
           },
         }),
       });

@@ -1,6 +1,7 @@
 import { atom } from "jotai";
 import { inputEdgesAtom, inputNodesAtom } from "./graphAtom";
 import { analyzeGraph } from "@/utils/graphAnalysis";
+import { FileNode } from "../tree";
 
 export const ownerAtom = atom<string>("");
 export const repoNameAtom = atom<string>("");
@@ -17,3 +18,4 @@ export const isCodeViewAtom = atom(false);
 export const loadingAnalysisAtom = atom(false);
 export const selectedPathsAtom = atom<Set<string>>(new Set<string>());
 export const fileContentAtom = atom<string>("");
+export const fileTreeAtom = atom<FileNode[]>([]);

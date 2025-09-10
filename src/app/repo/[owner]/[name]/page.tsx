@@ -22,7 +22,7 @@ export default async function RepoPage({
   return (
     <RepoAtomProvider owner={resolvedParams.owner} name={resolvedParams.name}>
       <Header />
-      <RepoClient owner={resolvedParams.owner} name={resolvedParams.name} />
+      <RepoClient />
     </RepoAtomProvider>
   );
 }

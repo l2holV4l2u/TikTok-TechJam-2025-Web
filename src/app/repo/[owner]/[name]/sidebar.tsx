@@ -1,22 +1,22 @@
-import { DependencyGraphProps } from "@/types/graphTypes";
-import { RepoClientProps } from "@/types/repoTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileNode } from "@/lib/tree";
 import { ChevronRight, PanelLeft } from "lucide-react";
-import { Dispatch, SetStateAction, useState } from "react";
+import { useState } from "react";
 import { FileTab } from "./tab/fileTab";
 import { AnalysisTab } from "./tab/analysisTab";
 import { AITab } from "./tab/aiTab";
+import { useAtom, useAtomValue } from "jotai";
+import {
+  ownerAtom,
+  repoNameAtom,
+  selectedPathsAtom,
+} from "@/lib/atom/repoAtom";
+import { graphAtom } from "@/lib/atom/graphAtom";
 
 export function Sidebar({
   loading,
   fileTree,
-  owner,
-  name,
-  selectedPaths,
-  setSelectedPaths,
   onFileClick,
-  graph,
   onShowComparison,
   improvementResult,
   showComparison,
@@ -24,19 +24,18 @@ export function Sidebar({
 }: {
   loading: boolean;
   fileTree: FileNode[];
-  selectedPaths: Set<string>;
-  setSelectedPaths: Dispatch<SetStateAction<Set<string>>>;
   onFileClick: (path: string, sha: string) => void;
-  graph: DependencyGraphProps | null;
   onShowComparison?: (result: any) => void;
   improvementResult?: any;
   showComparison?: boolean;
   onToggleComparison?: (show: boolean) => void;
-} & RepoClientProps) {
+}) {
+  const owner = useAtomValue(ownerAtom);
+  const repoName = useAtomValue(repoNameAtom);
+  const graph = useAtomValue(graphAtom);
+  const [selectedPaths, setSelectedPaths] = useAtom(selectedPathsAtom);
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
-  const toggleFileTree = () => {
-    setIsFileTreeCollapsed(!isFileTreeCollapsed);
-  };
+  const toggleFileTree = () => setIsFileTreeCollapsed(!isFileTreeCollapsed);
 
   return (
     <>
@@ -81,7 +80,7 @@ export function Sidebar({
                   loading={loading}
                   fileTree={fileTree}
                   owner={owner}
-                  name={name}
+                  name={repoName}
                   selectedPaths={selectedPaths}
                   setSelectedPaths={setSelectedPaths}
                   onFileClick={onFileClick}
@@ -93,7 +92,7 @@ export function Sidebar({
               <TabsContent value="ai" className="flex-1 min-h-0">
                 <AITab
                   owner={owner}
-                  name={name}
+                  name={repoName}
                   graph={graph}
                   onShowComparison={onShowComparison}
                   improvementResult={improvementResult}

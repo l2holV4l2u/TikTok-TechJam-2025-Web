@@ -3,11 +3,9 @@
 import { useState, useEffect } from "react";
 import type React from "react";
 import { Button } from "@/components/ui/button";
-import { FileNode } from "@/lib/tree";
 import { Network, File } from "lucide-react";
 import { DependencyGraph } from "@/components/graph/graph";
 import { GraphComparison } from "@/components/graph/graphComparison";
-import { RepoClientProps } from "@/types/repoTypes";
 import { Sidebar } from "./sidebar";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
@@ -19,10 +17,12 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
   fileContentAtom,
+  fileTreeAtom,
   isCodeViewAtom,
   loadingAnalysisAtom,
+  ownerAtom,
+  repoNameAtom,
   selectedFileAtom,
-  selectedPathsAtom,
 } from "@/lib/atom/repoAtom";
 import {
   analyzeRepository,
@@ -31,17 +31,18 @@ import {
   filterKotlinFiles,
 } from "@/utils/graphUtils";
 
-export default function RepoClient({ owner, name }: RepoClientProps) {
-  const [fileTree, setFileTree] = useState<FileNode[]>([]);
+export default function RepoClient() {
+  const [fileTree, setFileTree] = useAtom(fileTreeAtom);
   const [loadingTree, setLoadingTree] = useState(true); // loading tree
   const [loadingAnalysis, setLoadingAnalysis] = useAtom(loadingAnalysisAtom);
   const [graph, setGraph] = useAtom(graphAtom);
-  const [selectedPaths, setSelectedPaths] = useAtom(selectedPathsAtom);
   const [improvementResult, setImprovementResult] = useState<any>(null);
   const [showComparison, setShowComparison] = useState(false);
   const isCodeView = useAtomValue(isCodeViewAtom);
   const [selectedFile, setSelectedFile] = useAtom(selectedFileAtom);
   const [fileContent, setFileContent] = useAtom(fileContentAtom);
+  const owner = useAtomValue(ownerAtom);
+  const repoName = useAtomValue(repoNameAtom);
 
   const setInputNodes = useSetAtom(inputNodesAtom);
   const setInputEdges = useSetAtom(inputEdgesAtom);
@@ -54,7 +55,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
 
   const analyzeRepositoryHelper = async () => {
     setLoadingAnalysis(true);
-    const analysis = await analyzeRepository(owner, name);
+    const analysis = await analyzeRepository(owner, repoName);
     if (analysis.nodes && analysis.edges) {
       setGraph({
         nodes: analysis.nodes,
@@ -69,7 +70,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
   useEffect(() => {
     const initializeRepo = async () => {
       setLoadingTree(true);
-      const data = await fetchFileTree(owner, name);
+      const data = await fetchFileTree(owner, repoName);
       if (data) {
         setFileTree(filterKotlinFiles(data.tree));
       }
@@ -84,16 +85,11 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
       <Sidebar
         loading={loadingTree}
         fileTree={fileTree}
-        owner={owner}
-        name={name}
-        selectedPaths={selectedPaths}
-        setSelectedPaths={setSelectedPaths}
         onFileClick={async (path: string, sha: string) => {
-          const data = await fetchFileContent(owner, name, path, sha);
+          const data = await fetchFileContent(owner, repoName, path, sha);
           setSelectedFile(path);
           setFileContent(data.content);
         }}
-        graph={graph}
         onShowComparison={handleShowComparison}
         improvementResult={improvementResult}
         showComparison={showComparison}
@@ -162,7 +158,7 @@ export default function RepoClient({ owner, name }: RepoClientProps) {
               </div>
             </div>
           ) : graph ? (
-            <DependencyGraph fileTree={fileTree} owner={owner} repo={name} />
+            <DependencyGraph />
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
