@@ -23,7 +23,7 @@ import {
   getNodeLabel,
 } from "@/utils/graphUtils";
 import { GraphNode, SelectedNode } from "@/types/graphTypes";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   inputEdgesAtom,
   inputNodesAtom,
@@ -54,6 +54,7 @@ import {
   fileTreeAtom,
   ownerAtom,
   repoNameAtom,
+  highlightedFileAtom,
 } from "@/lib/atom/repoAtom";
 
 function createNodeFromData(
@@ -67,6 +68,7 @@ function createNodeFromData(
     type: "default",
     position: { x: 0, y: 0 },
     data: {
+      graphNode: node, // Store the original GraphNode data
       label: (
         <ContextMenu>
           <ContextMenuTrigger>
@@ -135,6 +137,8 @@ export const DependencyGraph = () => {
   const showHeavyNodes = useAtomValue(showHeavyNodesAtom);
   const showLongestPath = useAtomValue(showLongestPathAtom);
   const showCriticalNodes = useAtomValue(showCriticalNodesAtom);
+  const highlightedFile = useAtomValue(highlightedFileAtom);
+  const setHighlightedFile = useSetAtom(highlightedFileAtom);
   const [selectedNode, setSelectedNode] = useState<SelectedNode>(null);
   const [codeModal, setCodeModal] = useState<{
     isOpen: boolean;
@@ -245,8 +249,9 @@ export const DependencyGraph = () => {
   useEffect(() => {
     if (showCycles || showHeavyNodes || showLongestPath || showCriticalNodes) {
       setSelectedNode(null);
+      setHighlightedFile(null); // Also clear highlighted file
     }
-  }, [showCycles, showHeavyNodes, showLongestPath, showCriticalNodes]);
+  }, [showCycles, showHeavyNodes, showLongestPath, showCriticalNodes, setHighlightedFile]);
 
   const adjacency = useMemo(() => {
     const parentsMap = new Map<string, Set<string>>();
@@ -265,6 +270,9 @@ export const DependencyGraph = () => {
 
   const onNodeClick = useCallback(
     (_e: React.MouseEvent, node: Node) => {
+      // Clear highlighted file when a node is manually selected
+      setHighlightedFile(null);
+      
       // Only allow node selection when no analysis view is active
       setSelectedNode((prev) =>
         prev?.id === node.id
@@ -277,7 +285,7 @@ export const DependencyGraph = () => {
             }
       );
     },
-    [inputNodes, showCycles, showHeavyNodes, showLongestPath, showCriticalNodes]
+    [inputNodes, showCycles, showHeavyNodes, showLongestPath, showCriticalNodes, setHighlightedFile]
   );
 
   const styledNodes = useMemo(() => {
@@ -286,7 +294,7 @@ export const DependencyGraph = () => {
       showHeavyNodes,
       showLongestPath,
       showCriticalNodes,
-    });
+    }, highlightedFile);
   }, [
     nodes,
     selectedNode,
@@ -296,6 +304,7 @@ export const DependencyGraph = () => {
     showHeavyNodes,
     showLongestPath,
     showCriticalNodes,
+    highlightedFile,
   ]);
 
   const styledEdges = useMemo(() => {
@@ -304,7 +313,7 @@ export const DependencyGraph = () => {
       showHeavyNodes,
       showLongestPath,
       showCriticalNodes,
-    });
+    }, highlightedFile);
   }, [
     edges,
     selectedNode,
@@ -314,6 +323,7 @@ export const DependencyGraph = () => {
     showHeavyNodes,
     showLongestPath,
     showCriticalNodes,
+    highlightedFile,
   ]);
 
   return (
@@ -341,7 +351,7 @@ export const DependencyGraph = () => {
               showHeavyNodes,
               showLongestPath,
               showCriticalNodes,
-            })
+            }, highlightedFile)
           }
         />
       </ReactFlow>

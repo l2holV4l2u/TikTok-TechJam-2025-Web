@@ -14,6 +14,7 @@ export const analysisAtom = atom((get) => {
 });
 
 export const selectedFileAtom = atom<string | null>(null);
+export const highlightedFileAtom = atom<string | null>(null); // For graph view file highlighting
 export const isCodeViewAtom = atom(false);
 export const loadingAnalysisAtom = atom(false);
 export const selectedPathsAtom = atom<Set<string>>(new Set<string>());

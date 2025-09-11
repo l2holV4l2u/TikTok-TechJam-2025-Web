@@ -81,7 +81,8 @@ export function getStyledNodes(
   selectedNode: SelectedNode,
   adjacency: AdjacencyMaps,
   analysis: AnalysisData,
-  flags: AnalysisFlags
+  flags: AnalysisFlags,
+  highlightedFile?: string | null
 ): Node[] {
   const activeAnalysisView = hasActiveAnalysisView(flags);
 
@@ -95,6 +96,10 @@ export function getStyledNodes(
     const isInLongestPath = isNodeInLongestPath(node.id, analysis, flags);
     const isCritical = isNodeCritical(node.id, analysis, flags);
 
+    // Check if node is associated with the highlighted file
+    const nodeFilePath = (node.data?.graphNode as any)?.definedIn?.file;
+    const isHighlightedFileNode = highlightedFile && nodeFilePath === highlightedFile;
+
     let extraStyle: React.CSSProperties = {};
 
     if (activeAnalysisView) {
@@ -106,6 +111,13 @@ export function getStyledNodes(
         extraStyle = NODE_STYLES.LONGEST_PATH;
       } else if (isCritical) {
         extraStyle = NODE_STYLES.CRITICAL;
+      } else {
+        extraStyle = NODE_STYLES.FADED;
+      }
+    } else if (highlightedFile) {
+      // File highlighting mode - make non-matching nodes transparent
+      if (isHighlightedFileNode) {
+        extraStyle = NODE_STYLES.SELECTED;
       } else {
         extraStyle = NODE_STYLES.FADED;
       }
@@ -182,7 +194,8 @@ export function getStyledEdges(
   selectedNode: SelectedNode,
   adjacency: AdjacencyMaps,
   analysis: AnalysisData,
-  flags: AnalysisFlags
+  flags: AnalysisFlags,
+  highlightedFile?: string | null
 ): Edge[] {
   const activeAnalysisView = hasActiveAnalysisView(flags);
 
@@ -202,6 +215,8 @@ export function getStyledEdges(
       } else {
         edgeStyle = EDGE_STYLES.FADED;
       }
+    } else if (highlightedFile) {
+      edgeStyle = EDGE_STYLES.FADED;
     } else if (isParent) {
       edgeStyle = EDGE_STYLES.PARENT;
     } else if (isChild) {
@@ -228,7 +243,8 @@ export function getMiniMapNodeColor(
   selectedNode: SelectedNode,
   adjacency: AdjacencyMaps,
   analysis: AnalysisData,
-  flags: AnalysisFlags
+  flags: AnalysisFlags,
+  highlightedFile?: string | null
 ) {
   if (flags.showCycles && analysis.cycles.cycleNodes.has(node.id))
     return "#ef4444";
@@ -244,6 +260,14 @@ export function getMiniMapNodeColor(
     analysis.criticalNodes.slice(0, 3).includes(node.id)
   )
     return "#f59e0b";
+
+  if (highlightedFile) {
+    const nodeFilePath = (node.data?.graphNode as any)?.definedIn?.file;
+    if (nodeFilePath === highlightedFile) {
+      return "#6366f1";
+    }
+    return "#d1d5db";
+  }
 
   if (!selectedNode) return "#94a3b8";
   if (selectedNode.id === node.id) return "#6366f1";
