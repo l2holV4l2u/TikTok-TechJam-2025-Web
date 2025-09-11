@@ -3,7 +3,20 @@ import path from "path";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-const DATA_DIR = path.join(process.cwd(), "data");
+
+// Use /tmp in serverless, local data folder in development
+const getDataDir = () => {
+  if (
+    process.env.VERCEL ||
+    process.env.LAMBDA_TASK_ROOT ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME
+  ) {
+    return "/tmp/data";
+  }
+  return path.join(process.cwd(), "data");
+};
+
+const DATA_DIR = getDataDir();
 
 interface CodeChunk {
   id: string;
@@ -190,8 +203,8 @@ export async function indexFilesInMemory(
           }
         }
 
-        // Add small delay to avoid rate limits
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Remove the artificial delay for faster processing
+        // await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (fileError) {
         const errorMsg = `Failed to process file ${file.path}: ${fileError}`;
         console.error(errorMsg);
@@ -262,8 +275,8 @@ export async function indexRepoLocal(
           }
         }
 
-        // Add small delay to avoid rate limits
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Remove artificial delay
+        // await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (fileError) {
         const errorMsg = `Failed to process file ${file}: ${fileError}`;
         console.error(errorMsg);

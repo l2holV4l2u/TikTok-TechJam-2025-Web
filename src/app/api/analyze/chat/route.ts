@@ -10,7 +10,16 @@ import { auth } from "@/lib/auth";
 import { GitHubAPI, type GitHubTreeItem } from "@/lib/github";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-const DATA_DIR = path.join(process.cwd(), "data");
+
+// Use /tmp in serverless, local data folder in development
+const getDataDir = () => {
+  if (process.env.VERCEL) {
+    return "/tmp/data";
+  }
+  return path.join(process.cwd(), "data");
+};
+
+const DATA_DIR = getDataDir();
 
 interface IndexStatus {
   indexed: boolean;
@@ -69,7 +78,7 @@ export async function POST(req: Request) {
 
     console.log(`Starting indexing for ${owner}/${repo}`);
 
-    // Index the repository using GitHub API instead of git clone
+    // Index the repository using GitHub API
     const result = await indexRepoViaGitHubAPI(
       session.accessToken,
       owner,
@@ -159,8 +168,8 @@ async function indexRepoViaGitHubAPI(
     const files: { path: string; content: string }[] = [];
     const errors: string[] = [];
 
-    // Process files with concurrency control
-    const CONCURRENCY = 8;
+    // Process files with higher concurrency for faster processing
+    const CONCURRENCY = 15;
     let fileIndex = 0;
 
     async function processFile() {
@@ -230,7 +239,7 @@ async function indexRepoViaGitHubAPI(
       `Successfully processed ${files.length} files, now indexing...`
     );
 
-    // Use the existing indexing logic but with in-memory files
+    // Use the file-based indexing logic with /tmp/
     const result = await indexFilesInMemory(owner, repo, files);
 
     return {
@@ -309,6 +318,7 @@ async function saveIndexMetadata(
   totalChunks: number
 ): Promise<void> {
   try {
+    await fs.ensureDir(DATA_DIR);
     const metadataFile = path.join(
       DATA_DIR,
       `${owner}__${repo}__metadata.json`
