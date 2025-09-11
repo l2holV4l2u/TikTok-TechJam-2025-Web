@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import type { CheckedState } from "@radix-ui/react-checkbox";
 import type React from "react";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { cn } from "@/lib/utils";
 import {
   fileTreeAtom,
@@ -50,10 +50,10 @@ export function FileTab({
   const fileTree = useAtomValue(fileTreeAtom);
 
   // Analysis state setters
-  const [, setShowCycles] = useAtom(showCyclesAtom);
-  const [, setShowHeavyNodes] = useAtom(showHeavyNodesAtom);
-  const [, setShowLongestPath] = useAtom(showLongestPathAtom);
-  const [, setShowCriticalNodes] = useAtom(showCriticalNodesAtom);
+  const setShowCycles = useSetAtom(showCyclesAtom);
+  const setShowHeavyNodes = useSetAtom(showHeavyNodesAtom);
+  const setShowLongestPath = useSetAtom(showLongestPathAtom);
+  const setShowCriticalNodes = useSetAtom(showCriticalNodesAtom);
 
   // Function to clear all analysis states
   const clearAnalysisStates = () => {
@@ -134,7 +134,9 @@ export function FileTab({
           className={cn(
             "flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors",
             selectedFile == node.path && "bg-gray-100 rounded-md",
-            !isCodeView && highlightedFile === node.path && "bg-blue-100 border-l-2 border-blue-500"
+            !isCodeView &&
+              highlightedFile === node.path &&
+              "bg-blue-100 border-l-2 border-blue-500"
           )}
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
           onClick={() => {
@@ -145,7 +147,9 @@ export function FileTab({
             } else if (!isCodeView && node.type === "file") {
               // Clear analysis states when clicking a file
               clearAnalysisStates();
-              setHighlightedFile(highlightedFile === node.path ? null : node.path);
+              setHighlightedFile(
+                highlightedFile === node.path ? null : node.path
+              );
             }
           }}
         >
@@ -224,7 +228,9 @@ export function FileTab({
         className={cn(
           "flex items-center gap-2 py-2 px-2 hover:bg-gray-50 cursor-pointer text-sm transition-colors min-w-0",
           selectedFile == file.path && "bg-gray-100 rounded-md",
-          !isCodeView && highlightedFile === file.path && "bg-blue-100 border-l-2 border-blue-500"
+          !isCodeView &&
+            highlightedFile === file.path &&
+            "bg-blue-100 border-l-2 border-blue-500"
         )}
         onClick={() => {
           if (isCodeView && onFileClick) {
@@ -232,7 +238,9 @@ export function FileTab({
           } else if (!isCodeView) {
             // Clear analysis states when clicking a file
             clearAnalysisStates();
-            setHighlightedFile(highlightedFile === file.path ? null : file.path);
+            setHighlightedFile(
+              highlightedFile === file.path ? null : file.path
+            );
           }
         }}
       >
@@ -292,7 +300,7 @@ export function FileTab({
       </TabsContent>
 
       {/* Flat list tab */}
-      <TabsContent value="flat" className="flex-1 min-h-0 flex flex-col">
+      <TabsContent value="flat" className="flex-1 min-h-0 flex flex-col gap-2">
         {/* Search Bar */}
         <div className="px-2 py-2 border-b border-gray-100 flex-shrink-0 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -317,7 +325,10 @@ export function FileTab({
         <ScrollArea className="flex-1 px-2 overflow-hidden">
           {loading ? (
             Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2 px-2 min-w-0">
+              <div
+                key={i}
+                className="flex items-center gap-2 px-2 min-w-0 mb-2"
+              >
                 <Skeleton className="w-4 h-4 flex-shrink-0" />
                 <Skeleton className="h-4 flex-1 min-w-0" />
               </div>

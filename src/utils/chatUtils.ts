@@ -1,4 +1,3 @@
-// src/utils/chatUtils.ts
 import fs from "fs-extra";
 import path from "path";
 import OpenAI from "openai";
@@ -155,6 +154,74 @@ async function ensureDataDir(): Promise<void> {
   }
 }
 
+// New function for in-memory file indexing (replaces git clone approach)
+export async function indexFilesInMemory(
+  owner: string,
+  repo: string,
+  files: { path: string; content: string }[]
+): Promise<{ ok: boolean; indexed: number; errors?: string[] }> {
+  try {
+    await ensureDataDir();
+    const indexFile = path.join(DATA_DIR, `${owner}__${repo}__index.json`);
+
+    console.log(`Indexing ${files.length} files for ${owner}/${repo}`);
+
+    const items: IndexedItem[] = [];
+    const errors: string[] = [];
+
+    for (const file of files) {
+      try {
+        const chunks = chunkKotlinFile(file.content, file.path);
+        console.log(`Processing ${chunks.length} chunks from ${file.path}`);
+
+        for (const chunk of chunks) {
+          try {
+            const embedding = await embed(chunk.content);
+            items.push({
+              id: `${owner}/${repo}/${chunk.id}`,
+              embedding,
+              file: chunk.file,
+              content: chunk.content,
+            });
+          } catch (embeddingError) {
+            const errorMsg = `Failed to embed chunk ${chunk.id}: ${embeddingError}`;
+            console.error(errorMsg);
+            errors.push(errorMsg);
+          }
+        }
+
+        // Add small delay to avoid rate limits
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (fileError) {
+        const errorMsg = `Failed to process file ${file.path}: ${fileError}`;
+        console.error(errorMsg);
+        errors.push(errorMsg);
+      }
+    }
+
+    if (items.length === 0) {
+      throw new Error("No content was successfully indexed");
+    }
+
+    await fs.writeJson(indexFile, items, { spaces: 2 });
+
+    console.log(`Successfully indexed ${items.length} chunks`);
+    return {
+      ok: true,
+      indexed: items.length,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  } catch (error) {
+    console.error("Indexing error:", error);
+    throw new Error(
+      `Failed to index files: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
+}
+
+// Keep the original function for backward compatibility
 export async function indexRepoLocal(
   owner: string,
   repo: string,

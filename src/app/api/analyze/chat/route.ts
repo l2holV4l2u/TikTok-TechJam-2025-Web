@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { fetchRelevantChunksLocal, indexRepoLocal } from "@/utils/chatUtils";
+import {
+  fetchRelevantChunksLocal,
+  indexFilesInMemory,
+} from "@/utils/chatUtils";
 import fs from "fs-extra";
 import path from "path";
-import { exec } from "child_process";
-import { promisify } from "util";
 import OpenAI from "openai";
+import { auth } from "@/lib/auth";
+import { GitHubAPI, type GitHubTreeItem } from "@/lib/github";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-const execAsync = promisify(exec);
 const DATA_DIR = path.join(process.cwd(), "data");
-const REPOS_DIR = path.join(process.cwd(), "repos");
 
 interface IndexStatus {
   indexed: boolean;
@@ -43,6 +44,15 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    // Check authentication first
+    const session = await auth();
+    if (!session?.accessToken) {
+      return NextResponse.json(
+        { error: "Unauthorized - please login" },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { owner, repo, question } = body;
 
@@ -59,29 +69,14 @@ export async function POST(req: Request) {
 
     console.log(`Starting indexing for ${owner}/${repo}`);
 
-    // Ensure directories exist
-    await fs.ensureDir(REPOS_DIR);
-    await fs.ensureDir(DATA_DIR);
+    // Index the repository using GitHub API instead of git clone
+    const result = await indexRepoViaGitHubAPI(
+      session.accessToken,
+      owner,
+      repo
+    );
 
-    const repoPath = path.join(REPOS_DIR, `${owner}__${repo}`);
-
-    // Clone or update repository
-    const cloneSuccess = await cloneOrUpdateRepo(owner, repo, repoPath);
-    if (!cloneSuccess) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Failed to clone repository. Please check if the repository exists and is public.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Index the repository
-    const result = await indexRepoLocal(owner, repo, repoPath);
-
-    if (result.ok) {
+    if (result.success && result.indexed !== undefined) {
       // Save indexing metadata
       await saveIndexMetadata(owner, repo, result.indexed);
 
@@ -94,7 +89,7 @@ export async function POST(req: Request) {
       });
     } else {
       return NextResponse.json(
-        { success: false, error: "Indexing failed" },
+        { success: false, error: result.error },
         { status: 500 }
       );
     }
@@ -111,51 +106,161 @@ export async function POST(req: Request) {
   }
 }
 
-async function cloneOrUpdateRepo(
+async function indexRepoViaGitHubAPI(
+  accessToken: string,
   owner: string,
-  repo: string,
-  repoPath: string
-): Promise<boolean> {
+  repo: string
+): Promise<{
+  success: boolean;
+  indexed?: number;
+  error?: string;
+  errors?: string[];
+}> {
   try {
-    const repoUrl = `https://github.com/${owner}/${repo}.git`;
+    await fs.ensureDir(DATA_DIR);
 
-    // Check if repo already exists
-    if (await fs.pathExists(repoPath)) {
-      console.log(`Repository already exists, updating: ${repoPath}`);
-      try {
-        await execAsync("git pull origin main", {
-          cwd: repoPath,
-          timeout: 30000,
-        });
-        console.log("Repository updated successfully");
-        return true;
-      } catch (pullError) {
-        console.warn("Git pull failed, removing and re-cloning:", pullError);
-        await fs.remove(repoPath);
+    const gh = new GitHubAPI(accessToken);
+
+    // Get repository info to get default branch
+    const repoInfo = await gh.getRepo(owner, repo);
+    const branch = await gh.getBranch(owner, repo, repoInfo.default_branch);
+    const commitSha = branch.commit.sha;
+
+    console.log(
+      `Fetching repository tree for ${owner}/${repo} at ${commitSha}`
+    );
+
+    // Fetch full repository tree
+    const tree = await gh.getRepoTree(owner, repo, commitSha);
+    const entries = tree.tree as GitHubTreeItem[];
+
+    // Filter for Kotlin/Java files
+    const codeFiles = entries.filter(
+      (entry) =>
+        entry.type === "blob" &&
+        (entry.path.endsWith(".kt") ||
+          entry.path.endsWith(".kts") ||
+          entry.path.endsWith(".java"))
+    );
+
+    if (codeFiles.length === 0) {
+      return {
+        success: false,
+        error: "No Kotlin or Java files found in the repository",
+      };
+    }
+
+    console.log(`Found ${codeFiles.length} code files to index`);
+
+    const MAX_FILES = 500; // Reasonable limit
+    const MAX_BLOB_SIZE = 1 * 1024 * 1024; // 1MB per file
+    const filesToProcess = codeFiles.slice(0, MAX_FILES);
+
+    const files: { path: string; content: string }[] = [];
+    const errors: string[] = [];
+
+    // Process files with concurrency control
+    const CONCURRENCY = 8;
+    let fileIndex = 0;
+
+    async function processFile() {
+      while (fileIndex < filesToProcess.length) {
+        const currentIndex = fileIndex++;
+        const file = filesToProcess[currentIndex];
+
+        try {
+          console.log(
+            `Processing file ${currentIndex + 1}/${filesToProcess.length}: ${
+              file.path
+            }`
+          );
+
+          const blob = await gh.getBlob(owner, repo, file.sha);
+
+          // Skip very large files
+          if (blob.size > MAX_BLOB_SIZE) {
+            console.warn(
+              `Skipping large file: ${file.path} (${blob.size} bytes)`
+            );
+            continue;
+          }
+
+          let content: string;
+          if (blob.encoding === "base64") {
+            try {
+              content = Buffer.from(blob.content, "base64").toString("utf-8");
+            } catch (decodeError) {
+              errors.push(`Failed to decode file ${file.path}: ${decodeError}`);
+              continue;
+            }
+          } else {
+            content = String((blob as any).content ?? "");
+          }
+
+          // Validate content is not empty
+          if (content.trim().length === 0) {
+            console.warn(`Skipping empty file: ${file.path}`);
+            continue;
+          }
+
+          files.push({
+            path: file.path,
+            content: content,
+          });
+        } catch (fileError) {
+          const errorMsg = `Failed to process file ${file.path}: ${fileError}`;
+          console.error(errorMsg);
+          errors.push(errorMsg);
+        }
       }
     }
 
-    // Clone repository
-    console.log(`Cloning repository: ${repoUrl}`);
-    await execAsync(`git clone --depth 1 "${repoUrl}" "${repoPath}"`, {
-      timeout: 60000, // 1 minute timeout
-    });
+    // Process files concurrently
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => processFile()));
 
-    console.log("Repository cloned successfully");
-    return true;
+    if (files.length === 0) {
+      return {
+        success: false,
+        error: "No valid code files could be processed",
+        errors,
+      };
+    }
+
+    console.log(
+      `Successfully processed ${files.length} files, now indexing...`
+    );
+
+    // Use the existing indexing logic but with in-memory files
+    const result = await indexFilesInMemory(owner, repo, files);
+
+    return {
+      success: result.ok,
+      indexed: result.indexed,
+      errors: [...errors, ...(result.errors || [])],
+    };
   } catch (error) {
-    console.error(`Failed to clone repository ${owner}/${repo}:`, error);
+    console.error(`Failed to index repository via GitHub API:`, error);
 
-    // Clean up partial clone
-    try {
-      if (await fs.pathExists(repoPath)) {
-        await fs.remove(repoPath);
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes("404")) {
+        return {
+          success: false,
+          error: "Repository not found or you don't have access to it",
+        };
       }
-    } catch (cleanupError) {
-      console.warn("Failed to cleanup partial clone:", cleanupError);
+      if (error.message.includes("403")) {
+        return {
+          success: false,
+          error: "Access denied - please check your GitHub permissions",
+        };
+      }
     }
 
-    return false;
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error occurred",
+    };
   }
 }
 

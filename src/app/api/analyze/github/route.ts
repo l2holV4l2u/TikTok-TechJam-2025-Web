@@ -1,4 +1,3 @@
-// src/app/api/analyze/github/route.ts
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -11,13 +10,18 @@ import { analyzeFiles } from "@/lib/analyze-core";
 
 // ---------- shared ----------
 const query = z.object({
-  owner:  z.string().min(1),
-  repo:   z.string().min(1),
-  ref:    z.string().optional(),   // branch/tag/sha; default: default_branch
-  prefix: z.string().optional(),   // optional folder filter
+  owner: z.string().min(1),
+  repo: z.string().min(1),
+  ref: z.string().optional(), // branch/tag/sha; default: default_branch
+  prefix: z.string().optional(), // optional folder filter
 });
 
-async function resolveCommitSha(gh: GitHubAPI, owner: string, repo: string, ref?: string) {
+async function resolveCommitSha(
+  gh: GitHubAPI,
+  owner: string,
+  repo: string,
+  ref?: string
+) {
   if (ref) {
     try {
       const b = await gh.getBranch(owner, repo, ref);
@@ -55,14 +59,16 @@ export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.accessToken) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+      });
     }
 
     const { searchParams } = new URL(req.url);
     const { owner, repo, ref, prefix } = query.parse({
-      owner:  searchParams.get("owner"),
-      repo:   searchParams.get("repo"),
-      ref:    searchParams.get("ref") ?? undefined,
+      owner: searchParams.get("owner"),
+      repo: searchParams.get("repo"),
+      ref: searchParams.get("ref") ?? undefined,
       prefix: searchParams.get("prefix") ?? undefined,
     });
 
@@ -77,16 +83,21 @@ export async function GET(req: NextRequest) {
     const normPrefix = normalizePath(prefix ?? "");
     if (normPrefix) {
       entries = entries
-        .filter((e) => e.path === normPrefix || e.path.startsWith(normPrefix + "/"))
+        .filter(
+          (e) => e.path === normPrefix || e.path.startsWith(normPrefix + "/")
+        )
         .map((e) => ({
           ...e,
-          path: e.path === normPrefix ? "" : e.path.slice(normPrefix.length + 1),
+          path:
+            e.path === normPrefix ? "" : e.path.slice(normPrefix.length + 1),
         }))
         .filter((e) => e.path !== "");
     }
 
     // only Kotlin blobs
-    const kt = entries.filter((e) => e.type === "blob" && e.path.endsWith(".kt"));
+    const kt = entries.filter(
+      (e) => e.type === "blob" && e.path.endsWith(".kt")
+    );
 
     // fetch blobs with small concurrency, limit per-file size
     const MAX_FILES = 2000;
@@ -111,7 +122,10 @@ export async function GET(req: NextRequest) {
             // skip non-text
           }
         } else {
-          files.push({ path: f.path, content: String((blob as any).content ?? "") });
+          files.push({
+            path: f.path,
+            content: String((blob as any).content ?? ""),
+          });
         }
       }
     }
@@ -120,23 +134,31 @@ export async function GET(req: NextRequest) {
     const analysis = await analyzeFiles(files);
 
     return Response.json({
-      repo: { owner, name: repo, ref: ref ?? commitSha, fileCount: files.length },
+      repo: {
+        owner,
+        name: repo,
+        ref: ref ?? commitSha,
+        fileCount: files.length,
+      },
       truncated: tree.truncated,
       prefix: normPrefix || undefined,
       ...analysis,
     });
   } catch (err: any) {
     console.error("analyze/github GET error:", err);
-    return new Response(JSON.stringify({ error: err?.message ?? "Internal error" }), { status: 500 });
+    return new Response(
+      JSON.stringify({ error: err?.message ?? "Internal error" }),
+      { status: 500 }
+    );
   }
 }
 
 // ---------- NEW: POST /api/analyze/github (analyze only selected paths) ----------
 const postBody = z.object({
-  owner:        z.string().min(1),
-  repo:         z.string().min(1),
-  ref:          z.string().optional(),
-  prefix:       z.string().optional(),        // if UI filtered by a prefix, pass it here too
+  owner: z.string().min(1),
+  repo: z.string().min(1),
+  ref: z.string().optional(),
+  prefix: z.string().optional(), // if UI filtered by a prefix, pass it here too
   includePaths: z.array(z.string().min(1)).min(1), // file and/or folder paths (repo-root or relative to prefix)
 });
 
@@ -144,7 +166,9 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.accessToken) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+      });
     }
 
     const body = await req.json();
@@ -161,10 +185,13 @@ export async function POST(req: NextRequest) {
     const normPrefix = normalizePath(prefix ?? "");
     if (normPrefix) {
       entries = entries
-        .filter((e) => e.path === normPrefix || e.path.startsWith(normPrefix + "/"))
+        .filter(
+          (e) => e.path === normPrefix || e.path.startsWith(normPrefix + "/")
+        )
         .map((e) => ({
           ...e,
-          path: e.path === normPrefix ? "" : e.path.slice(normPrefix.length + 1),
+          path:
+            e.path === normPrefix ? "" : e.path.slice(normPrefix.length + 1),
         }))
         .filter((e) => e.path !== "");
     }
@@ -172,12 +199,17 @@ export async function POST(req: NextRequest) {
     // keep only .kt blobs that are under any includePaths
     const normalizedIncludes = includePaths.map(normalizePath);
     const selected = entries.filter(
-      (e) => e.type === "blob" && e.path.endsWith(".kt") && includedBy(normalizedIncludes, e.path)
+      (e) =>
+        e.type === "blob" &&
+        e.path.endsWith(".kt") &&
+        includedBy(normalizedIncludes, e.path)
     );
 
     if (selected.length === 0) {
       return new Response(
-        JSON.stringify({ error: "No matching Kotlin files for the provided includePaths" }),
+        JSON.stringify({
+          error: "No matching Kotlin files for the provided includePaths",
+        }),
         { status: 400 }
       );
     }
@@ -204,7 +236,10 @@ export async function POST(req: NextRequest) {
             // skip
           }
         } else {
-          files.push({ path: f.path, content: String((blob as any).content ?? "") });
+          files.push({
+            path: f.path,
+            content: String((blob as any).content ?? ""),
+          });
         }
       }
     }
@@ -213,7 +248,12 @@ export async function POST(req: NextRequest) {
     const analysis = await analyzeFiles(files);
 
     return Response.json({
-      repo: { owner, name: repo, ref: ref ?? commitSha, fileCount: files.length },
+      repo: {
+        owner,
+        name: repo,
+        ref: ref ?? commitSha,
+        fileCount: files.length,
+      },
       truncated: tree.truncated,
       prefix: normPrefix || undefined,
       selection: normalizedIncludes,
@@ -221,6 +261,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("analyze/github POST error:", err);
-    return new Response(JSON.stringify({ error: err?.message ?? "Internal error" }), { status: 500 });
+    return new Response(
+      JSON.stringify({ error: err?.message ?? "Internal error" }),
+      { status: 500 }
+    );
   }
 }

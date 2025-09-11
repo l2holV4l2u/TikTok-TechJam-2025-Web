@@ -131,10 +131,10 @@ export default function RepoClient() {
           ) : graph ? (
             <DependencyGraph />
           ) : (
-            <div className="flex flex-col gap-4 items-center justify-center h-full">
+            <div className="flex flex-col gap-4 items-center justify-center h-full p-32">
               <Network className="w-12 h-12 text-gray-400 mx-auto" />
               <div className="text-gray-600">No dependency analysis yet</div>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-gray-500 text-center">
                 Click "Analyze Repository" to see the full dependency graph, or
                 select files/folders and click "Analyze Selected" for targeted
                 analysis.

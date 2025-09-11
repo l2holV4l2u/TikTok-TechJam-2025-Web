@@ -251,7 +251,7 @@ export function AITab() {
           className={cn(
             "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
             isUser
-              ? "bg-primary text-primary-foreground"
+              ? "bg-gradient-to-br from-purple-700 to-pink-500 text-primary-foreground"
               : "bg-muted text-muted-foreground"
           )}
         >
@@ -294,8 +294,7 @@ export function AITab() {
                           borderRadius: "6px",
                           fontSize: "13px",
                           backgroundColor: isUser ? "#1e1e1e" : "#f8f9fa",
-                          minWidth: "100%",
-                          width: "fit-content",
+                          width: "300px",
                         }}
                         wrapLongLines={false}
                       >

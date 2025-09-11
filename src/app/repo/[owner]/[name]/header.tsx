@@ -45,8 +45,8 @@ export function Header() {
   const setInputEdges = useSetAtom(inputEdgesAtom);
   const setFileContent = useSetAtom(fileContentAtom);
   const setGraph = useSetAtom(graphAtom);
-  const owner = useAtomValue(ownerAtom);
-  const repoName = useAtomValue(repoNameAtom);
+  const [owner, setOwner] = useAtom(ownerAtom);
+  const [repoName, setRepoName] = useAtom(repoNameAtom);
   const repoFullName = `${owner}/${repoName}`;
 
   return (
@@ -54,7 +54,16 @@ export function Header() {
       <div className="relative flex items-center justify-between">
         {/* Left side */}
         <div className="flex gap-4">
-          <Button variant="outline" size="sm" asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            onClick={() => {
+              setOwner("");
+              setRepoName("");
+              setGraph(null);
+            }}
+          >
             <Link href="/dashboard">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Dashboard

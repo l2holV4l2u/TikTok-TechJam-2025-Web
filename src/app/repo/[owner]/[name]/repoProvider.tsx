@@ -24,7 +24,7 @@ export default function RepoAtomProvider({
     setRepoName(name);
   }, [owner, name, setOwner, setRepoName]);
 
-  if (!ownerAtomVal || !repoNameAtomVal) return <LoadingSpinner />;
+  if (ownerAtomVal == "" || repoNameAtomVal == "") return <LoadingSpinner />;
 
   return <div className="h-screen bg-gray-50 flex flex-col">{children}</div>;
 }
