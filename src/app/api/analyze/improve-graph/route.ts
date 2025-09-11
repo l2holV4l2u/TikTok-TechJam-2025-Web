@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth } from "@/lib/auth";
-import { cosineSim, embed } from "@/utils/vectorUtils";
+import { embed } from "@/utils/chatUtils";
 import { fetchRepoFiles } from "@/utils/githubUtils";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -27,7 +27,7 @@ async function queryRepo(issue: string, topN = 5) {
   const qEmbed = await embed(issue);
   const scored = vectorDB.map((f) => ({
     ...f,
-    score: cosineSim(f.embedding, qEmbed),
+    score: 0,
   }));
   return scored.sort((a, b) => b.score - a.score).slice(0, topN);
 }

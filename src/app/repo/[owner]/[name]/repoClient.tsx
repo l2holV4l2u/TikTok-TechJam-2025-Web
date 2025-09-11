@@ -83,10 +83,6 @@ export default function RepoClient() {
           setSelectedFile(path);
           setFileContent(data.content);
         }}
-        onShowComparison={handleShowComparison}
-        improvementResult={improvementResult}
-        showComparison={showComparison}
-        onToggleComparison={(show: boolean) => setShowComparison(show)}
       />
 
       {/* Main Content Area */}

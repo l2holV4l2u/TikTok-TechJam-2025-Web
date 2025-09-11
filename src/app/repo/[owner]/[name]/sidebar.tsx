@@ -8,17 +8,9 @@ import { AITab } from "./tab/aiTab";
 export function Sidebar({
   loading,
   onFileClick,
-  onShowComparison,
-  improvementResult,
-  showComparison,
-  onToggleComparison,
 }: {
   loading: boolean;
   onFileClick: (path: string, sha: string) => void;
-  onShowComparison?: (result: any) => void;
-  improvementResult?: any;
-  showComparison?: boolean;
-  onToggleComparison?: (show: boolean) => void;
 }) {
   const [isFileTreeCollapsed, setIsFileTreeCollapsed] = useState(false);
   const toggleFileTree = () => setIsFileTreeCollapsed(!isFileTreeCollapsed);
@@ -68,12 +60,7 @@ export function Sidebar({
                 <AnalysisTab />
               </TabsContent>
               <TabsContent value="ai" className="flex-1 min-h-0">
-                <AITab
-                  onShowComparison={onShowComparison}
-                  improvementResult={improvementResult}
-                  showComparison={showComparison}
-                  onToggleComparison={onToggleComparison}
-                />
+                <AITab />
               </TabsContent>
             </div>
           </Tabs>
