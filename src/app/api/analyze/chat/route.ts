@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
-import { indexRepoLocal } from "@/utils/chatUtils";
+import { fetchRelevantChunksLocal, indexRepoLocal } from "@/utils/chatUtils";
 import fs from "fs-extra";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
+import OpenAI from "openai";
 
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const execAsync = promisify(exec);
 const DATA_DIR = path.join(process.cwd(), "data");
 const REPOS_DIR = path.join(process.cwd(), "repos");
-
-interface IndexRequest {
-  owner: string;
-  repo: string;
-}
 
 interface IndexStatus {
   indexed: boolean;
@@ -46,8 +43,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const body: IndexRequest = await req.json();
-    const { owner, repo } = body;
+    const body = await req.json();
+    const { owner, repo, question } = body;
 
     if (!owner?.trim() || !repo?.trim()) {
       return NextResponse.json(
@@ -56,11 +53,8 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: "OpenAI API key not configured" },
-        { status: 500 }
-      );
+    if (question?.trim()) {
+      return await handleChatQuery(owner, repo, question.trim());
     }
 
     console.log(`Starting indexing for ${owner}/${repo}`);
@@ -225,5 +219,102 @@ async function saveIndexMetadata(
     await fs.writeJSON(metadataFile, metadata, { spaces: 2 });
   } catch (error) {
     console.warn("Failed to save index metadata:", error);
+  }
+}
+
+async function handleChatQuery(owner: string, repo: string, question: string) {
+  try {
+    console.log(`Processing question for ${owner}/${repo}: ${question}`);
+
+    // 1. Check if repository is indexed
+    const status = await getIndexStatus(owner, repo);
+    if (!status.indexed) {
+      return NextResponse.json({
+        error:
+          "Repository is not indexed yet. Please wait for auto-indexing to complete.",
+      });
+    }
+
+    // 2. Fetch relevant code chunks
+    const relevantChunks = await fetchRelevantChunksLocal(
+      owner,
+      repo,
+      question,
+      12
+    );
+
+    if (relevantChunks.length === 0) {
+      return NextResponse.json({
+        answer:
+          "I couldn't find any relevant code chunks for your question. The repository might not contain relevant content or may need re-indexing.",
+      });
+    }
+
+    // 3. Build context from relevant chunks
+    const context = relevantChunks
+      .map(
+        (chunk, index) =>
+          `--- Code Chunk ${index + 1} (Score: ${chunk.score.toFixed(
+            3
+          )}) ---\n${chunk.content}\n`
+      )
+      .join("\n");
+
+    // 4. Create OpenAI completion
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4", // or "gpt-3.5-turbo" for faster/cheaper responses
+      messages: [
+        {
+          role: "system",
+          content: `You are a helpful AI assistant analyzing a ${owner}/${repo} codebase. 
+          
+Rules:
+- Provide accurate, helpful answers based on the provided code context
+- If you can't find relevant information in the context, say so clearly
+- Include specific code examples when helpful
+- Mention file names when referencing specific code
+- Be concise but thorough
+- Format code blocks properly with triple backticks and language specification
+
+The user is asking about this repository, and you have access to relevant code chunks below.`,
+        },
+        {
+          role: "user",
+          content: `Based on this code context from ${owner}/${repo}:
+
+${context}
+
+Question: ${question}`,
+        },
+      ],
+      max_tokens: 1000,
+      temperature: 0.1, // Lower temperature for more focused, factual responses
+    });
+
+    const answer = completion.choices[0]?.message?.content;
+
+    if (!answer) {
+      return NextResponse.json({
+        error: "Failed to generate response from OpenAI",
+      });
+    }
+
+    console.log(`Generated response for ${owner}/${repo} question`);
+
+    return NextResponse.json({
+      answer,
+      relevantChunks: relevantChunks.length,
+      sources: relevantChunks.map((chunk) => chunk.file),
+    });
+  } catch (error) {
+    console.error("Chat query error:", error);
+    return NextResponse.json(
+      {
+        error: `Failed to process question: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      },
+      { status: 500 }
+    );
   }
 }
