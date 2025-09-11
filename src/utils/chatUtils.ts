@@ -56,16 +56,12 @@ export function chunkKotlinFile(
   filePath: string
 ): CodeChunk[] {
   const chunks: CodeChunk[] = [];
-
-  // Clean the content and handle edge cases
   const cleanContent = content.trim();
-  if (!cleanContent) {
-    return [];
-  }
+  if (!cleanContent) return [];
 
-  // Try to split by top-level declarations with improved regex
+  // Regex tuned for Kotlin: classes, objects, interfaces, enums, fun, val, var
   const declRegex =
-    /(?:^|\n)\s*(?:@[^\n]*\n\s*)*(?:(?:public|private|protected|internal)\s+)?(?:abstract\s+|final\s+|open\s+|sealed\s+|inner\s+|data\s+|inline\s+|suspend\s+|operator\s+|infix\s+)*(?:class|interface|object|enum\s+class|annotation\s+class|fun|val|var)(?:\s|<)+[^{]*?(?:\{[\s\S]*?(?:\n\}|\}\s*$)|[^\{]*?(?=\n\s*(?:@[^\n]*\n\s*)*(?:(?:public|private|protected|internal)\s+)?(?:abstract\s+|final\s+|open\s+|sealed\s+|inner\s+|data\s+|inline\s+|suspend\s+|operator\s+|infix\s+)*(?:class|interface|object|enum\s+class|annotation\s+class|fun|val|var)(?:\s|<)|$))/g;
+    /(?:^|\n)\s*(?:@[^\n]*\n\s*)*(?:(?:public|private|protected|internal)\s+)?(?:abstract\s+|final\s+|open\s+|sealed\s+|inner\s+|data\s+|inline\s+|suspend\s+|operator\s+|infix\s+)?(class|interface|object|enum\s+class|annotation\s+class|fun|val|var)\b[\s\S]*?(?=(?:\n\s*(?:public|private|protected|internal)\s+|$))/g;
 
   let match;
   let chunkIndex = 0;
@@ -73,13 +69,11 @@ export function chunkKotlinFile(
 
   while ((match = declRegex.exec(cleanContent)) !== null) {
     const declaration = match[0].trim();
-    if (declaration.length > 50) {
-      // Skip very small matches
+    if (declaration.length > 10) {
       foundMatches.push(declaration);
     }
   }
 
-  // If we found meaningful declarations, use them
   if (foundMatches.length > 0) {
     foundMatches.forEach((declaration, index) => {
       chunks.push({
@@ -89,50 +83,43 @@ export function chunkKotlinFile(
       });
     });
   } else {
-    // Fallback: chunk by logical size (around 1000 characters or 30-40 lines)
+    // Fallback: small file → keep entire file
     const lines = cleanContent.split("\n");
-    const LINES_PER_CHUNK = 40;
-    const MAX_CHUNK_SIZE = 1500;
-
-    for (let i = 0; i < lines.length; i += LINES_PER_CHUNK) {
-      const chunkLines = lines.slice(i, i + LINES_PER_CHUNK);
-      const chunkContent = chunkLines.join("\n").trim();
-
-      // Skip very small chunks
-      if (chunkContent.length < 100) continue;
-
-      // Split large chunks further
-      if (chunkContent.length > MAX_CHUNK_SIZE) {
-        const midpoint = Math.floor(chunkLines.length / 2);
-        const firstHalf = chunkLines.slice(0, midpoint).join("\n").trim();
-        const secondHalf = chunkLines.slice(midpoint).join("\n").trim();
-
-        if (firstHalf.length > 100) {
+    if (lines.length <= 80) {
+      chunks.push({
+        id: `${filePath}::full`,
+        content: cleanContent,
+        file: filePath,
+      });
+    } else {
+      // Larger file: split into 60-line chunks
+      const LINES_PER_CHUNK = 60;
+      for (let i = 0; i < lines.length; i += LINES_PER_CHUNK) {
+        const chunkLines = lines
+          .slice(i, i + LINES_PER_CHUNK)
+          .join("\n")
+          .trim();
+        if (chunkLines.length > 0) {
           chunks.push({
             id: `${filePath}::chunk::${chunkIndex++}`,
-            content: firstHalf,
+            content: chunkLines,
             file: filePath,
           });
         }
-
-        if (secondHalf.length > 100) {
-          chunks.push({
-            id: `${filePath}::chunk::${chunkIndex++}`,
-            content: secondHalf,
-            file: filePath,
-          });
-        }
-      } else {
-        chunks.push({
-          id: `${filePath}::chunk::${chunkIndex++}`,
-          content: chunkContent,
-          file: filePath,
-        });
       }
     }
   }
 
-  // Add file context to each chunk for better retrieval
+  // Always guarantee at least one chunk
+  if (chunks.length === 0) {
+    chunks.push({
+      id: `${filePath}::fallback`,
+      content: cleanContent,
+      file: filePath,
+    });
+  }
+
+  // Add file header context
   return chunks.map((chunk) => ({
     ...chunk,
     content: `// File: ${chunk.file}\n${chunk.content}`,
@@ -167,7 +154,7 @@ async function ensureDataDir(): Promise<void> {
   }
 }
 
-// New function for in-memory file indexing (replaces git clone approach)
+// New function for in-memory file indexing
 export async function indexFilesInMemory(
   owner: string,
   repo: string,

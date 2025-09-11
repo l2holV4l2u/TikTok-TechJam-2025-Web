@@ -197,7 +197,20 @@ async function indexRepoViaGitHubAPI(
           let content: string;
           if (blob.encoding === "base64") {
             try {
-              content = Buffer.from(blob.content, "base64").toString("utf-8");
+              // Enhanced base64 decoding with better error handling
+              const base64Content = blob.content;
+
+              // Remove any whitespace/newlines that might be in the base64 string
+              const cleanBase64 = base64Content.replace(/\s/g, "");
+
+              // Validate base64 length is multiple of 4
+              let validBase64 = cleanBase64;
+              if (cleanBase64.length % 4 !== 0) {
+                const padding = 4 - (cleanBase64.length % 4);
+                validBase64 += "=".repeat(padding);
+              }
+
+              content = Buffer.from(validBase64, "base64").toString("utf-8");
             } catch (decodeError) {
               errors.push(`Failed to decode file ${file.path}: ${decodeError}`);
               continue;

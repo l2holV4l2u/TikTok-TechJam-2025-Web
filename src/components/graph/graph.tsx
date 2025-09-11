@@ -34,7 +34,6 @@ import {
 } from "@/lib/atom/graphAtom";
 import { GraphLegend } from "./graphLegend";
 import { toast } from "sonner";
-import { FileNode } from "@/lib/tree";
 import { CodeModal } from "./graphCodeModal";
 import {
   ContextMenu,
@@ -42,7 +41,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { ChartColumnBig, CodeXml } from "lucide-react";
+import { CodeXml } from "lucide-react";
 import {
   getMiniMapNodeColor,
   getStyledEdges,
@@ -60,8 +59,7 @@ import {
 function createNodeFromData(
   node: GraphNode,
   index: number,
-  onViewCode: (nodeId: string) => void,
-  onAnalyze: (nodeId: string) => void
+  onViewCode: (nodeId: string) => void
 ) {
   return {
     id: node.id,
@@ -97,14 +95,6 @@ function createNodeFromData(
             >
               <CodeXml size={16} />
               View Code
-            </ContextMenuItem>
-
-            <ContextMenuItem
-              className="flex items-center gap-2"
-              onClick={() => onAnalyze(node.id)}
-            >
-              <ChartColumnBig size={16} />
-              Analyze Impact
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -229,19 +219,13 @@ export const DependencyGraph = () => {
     [inputNodes, fileTree, owner, repoName]
   );
 
-  const handleAnalyzeImpact = useCallback((nodeId: string) => {
-    // Show impact analysis for this specific node
-    console.log(`Analyzing impact of ${nodeId}`);
-    // You could open a modal with impact metrics, affected components, etc.
-  }, []);
-
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const n = inputNodes.map((node, index) =>
-      createNodeFromData(node, index, handleViewCode, handleAnalyzeImpact)
+      createNodeFromData(node, index, handleViewCode)
     );
     const e = inputEdges.map(createEdgeFromData);
     return getLayoutedElements(n, e);
-  }, [inputNodes, inputEdges, handleViewCode, handleAnalyzeImpact]);
+  }, [inputNodes, inputEdges, handleViewCode]);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
@@ -251,7 +235,13 @@ export const DependencyGraph = () => {
       setSelectedNode(null);
       setHighlightedFile(null); // Also clear highlighted file
     }
-  }, [showCycles, showHeavyNodes, showLongestPath, showCriticalNodes, setHighlightedFile]);
+  }, [
+    showCycles,
+    showHeavyNodes,
+    showLongestPath,
+    showCriticalNodes,
+    setHighlightedFile,
+  ]);
 
   const adjacency = useMemo(() => {
     const parentsMap = new Map<string, Set<string>>();
@@ -272,7 +262,7 @@ export const DependencyGraph = () => {
     (_e: React.MouseEvent, node: Node) => {
       // Clear highlighted file when a node is manually selected
       setHighlightedFile(null);
-      
+
       // Only allow node selection when no analysis view is active
       setSelectedNode((prev) =>
         prev?.id === node.id
@@ -285,16 +275,30 @@ export const DependencyGraph = () => {
             }
       );
     },
-    [inputNodes, showCycles, showHeavyNodes, showLongestPath, showCriticalNodes, setHighlightedFile]
-  );
-
-  const styledNodes = useMemo(() => {
-    return getStyledNodes(nodes, selectedNode, adjacency, analysis, {
+    [
+      inputNodes,
       showCycles,
       showHeavyNodes,
       showLongestPath,
       showCriticalNodes,
-    }, highlightedFile);
+      setHighlightedFile,
+    ]
+  );
+
+  const styledNodes = useMemo(() => {
+    return getStyledNodes(
+      nodes,
+      selectedNode,
+      adjacency,
+      analysis,
+      {
+        showCycles,
+        showHeavyNodes,
+        showLongestPath,
+        showCriticalNodes,
+      },
+      highlightedFile
+    );
   }, [
     nodes,
     selectedNode,
@@ -308,12 +312,19 @@ export const DependencyGraph = () => {
   ]);
 
   const styledEdges = useMemo(() => {
-    return getStyledEdges(edges, selectedNode, adjacency, analysis, {
-      showCycles,
-      showHeavyNodes,
-      showLongestPath,
-      showCriticalNodes,
-    }, highlightedFile);
+    return getStyledEdges(
+      edges,
+      selectedNode,
+      adjacency,
+      analysis,
+      {
+        showCycles,
+        showHeavyNodes,
+        showLongestPath,
+        showCriticalNodes,
+      },
+      highlightedFile
+    );
   }, [
     edges,
     selectedNode,
@@ -346,12 +357,19 @@ export const DependencyGraph = () => {
         <GraphLegend />
         <MiniMap
           nodeColor={(node) =>
-            getMiniMapNodeColor(node, selectedNode, adjacency, analysis, {
-              showCycles,
-              showHeavyNodes,
-              showLongestPath,
-              showCriticalNodes,
-            }, highlightedFile)
+            getMiniMapNodeColor(
+              node,
+              selectedNode,
+              adjacency,
+              analysis,
+              {
+                showCycles,
+                showHeavyNodes,
+                showLongestPath,
+                showCriticalNodes,
+              },
+              highlightedFile
+            )
           }
         />
       </ReactFlow>

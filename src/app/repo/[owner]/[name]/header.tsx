@@ -39,7 +39,7 @@ import {
 export function Header() {
   const [loadingAnalysis, setLoadingAnalysis] = useAtom(loadingAnalysisAtom);
   const [isCodeView, setIsCodeView] = useAtom(isCodeViewAtom);
-  const selectedPaths = useAtomValue(selectedPathsAtom);
+  const [selectedPaths, setSelectedPaths] = useAtom(selectedPathsAtom);
   const setSelectedFile = useSetAtom(selectedFileAtom);
   const setInputNodes = useSetAtom(inputNodesAtom);
   const setInputEdges = useSetAtom(inputEdgesAtom);
@@ -62,6 +62,7 @@ export function Header() {
               setOwner("");
               setRepoName("");
               setGraph(null);
+              setSelectedPaths(new Set());
             }}
           >
             <Link href="/dashboard">

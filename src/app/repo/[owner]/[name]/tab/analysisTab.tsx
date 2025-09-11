@@ -8,7 +8,7 @@ import {
   showHeavyNodesAtom,
   showLongestPathAtom,
 } from "@/lib/atom/graphAtom";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   AlertTriangle,
   BarChart3,
@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { analysisAtom } from "@/lib/atom/repoAtom";
-import { highlightedFileAtom } from"@/lib/atom/repoAtom";
+import { highlightedFileAtom } from "@/lib/atom/repoAtom";
 
 export function AnalysisTab() {
   const inputNodes = useAtomValue(inputNodesAtom);
@@ -34,7 +34,7 @@ export function AnalysisTab() {
   const [showCriticalNodes, setShowCriticalNodes] = useAtom(
     showCriticalNodesAtom
   );
-  const [highlightedFile, setHighlightedFile] = useAtom(highlightedFileAtom);
+  const setHighlightedFile = useSetAtom(highlightedFileAtom);
 
   // Function to clear all other views when activating one
   const setExclusiveView = (
